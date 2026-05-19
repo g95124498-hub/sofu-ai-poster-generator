@@ -1,7 +1,10 @@
-# SOFU AI Poster Generator v3.0.2
+# SOFU AI Poster Generator v4.0
 
-修正：
-- 取消價格牌 PNG 上傳
+v4 真 AI 商業生成版：
+- 不需手動去背
+- 上傳原始人車照
+- 上傳參考海報
+- 可上傳 Logo
 - 價格直接輸入數字
-- 價格牌由 Canvas 自動產生
-- 保留去背人車 PNG、參考海報、Logo PNG
+- 用 OpenAI Images API 重新生成商業海報
+- Prompt 限制不要多餘 icon / 功能框 / 側欄

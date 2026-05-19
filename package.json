@@ -1,22 +1,19 @@
 {
-  "name": "sofu-ai-poster-generator-v302-fixed-template",
-  "version": "3.0.2",
+  "name": "sofu-ai-poster-generator-v40-ai-commercial",
+  "version": "4.0.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
-  },
+  "scripts": {"dev":"next dev","build":"next build","start":"next start"},
   "dependencies": {
     "next": "latest",
     "react": "latest",
     "react-dom": "latest",
+    "openai": "latest",
     "lucide-react": "latest"
   },
   "devDependencies": {
-    "typescript": "latest",
-    "@types/node": "latest",
-    "@types/react": "latest",
-    "@types/react-dom": "latest"
+    "typescript":"latest",
+    "@types/node":"latest",
+    "@types/react":"latest",
+    "@types/react-dom":"latest"
   }
 }

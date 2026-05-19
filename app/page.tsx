@@ -1,291 +1,176 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Download, ImagePlus, Layers, RefreshCw } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Upload, Wand2, Download, ShieldCheck } from "lucide-react";
 
-type Key = "subject" | "style" | "logo";
-
-const items: { key: Key; label: string }[] = [
-  { key: "subject", label: "去背人車 PNG（必須）" },
-  { key: "style", label: "參考海報（只看風格）" },
-  { key: "logo", label: "SOFU Logo PNG" }
+type Key = "source" | "style" | "logo";
+const items:{key:Key,label:string,required?:boolean}[]=[
+  {key:"source",label:"原始人車照",required:true},
+  {key:"style",label:"參考海報",required:true},
+  {key:"logo",label:"SOFU Logo"}
 ];
 
-function loadImg(url: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = url;
-  });
+async function compressImage(file:File,maxSize=1200,quality=.72):Promise<File>{
+  const img=document.createElement("img");
+  const url=URL.createObjectURL(file);
+  await new Promise<void>((res,rej)=>{img.onload=()=>res();img.onerror=()=>rej();img.src=url});
+  const scale=Math.min(1,maxSize/Math.max(img.width,img.height));
+  const w=Math.round(img.width*scale),h=Math.round(img.height*scale);
+  const canvas=document.createElement("canvas"); canvas.width=w; canvas.height=h;
+  const ctx=canvas.getContext("2d")!; ctx.drawImage(img,0,0,w,h); URL.revokeObjectURL(url);
+  const blob=await new Promise<Blob>((res,rej)=>canvas.toBlob(b=>b?res(b):rej(),"image/jpeg",quality));
+  return new File([blob],file.name.replace(/\.[^.]+$/,"")+".jpg",{type:"image/jpeg"});
 }
 
-export default function Home() {
-  const refs = useRef<Partial<Record<Key, HTMLInputElement | null>>>({});
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [urls, setUrls] = useState<Partial<Record<Key, string>>>({});
-  const [carModel, setCarModel] = useState("2025 NISSAN X-TRAIL 1.5T");
-  const [jpText, setJpText] = useState("新入荷しました");
-  const [title, setTitle] = useState("新貨到");
-  const [feature, setFeature] = useState("超值 / 輕油電 / 現省大價差");
-  const [priceText, setPriceText] = useState("75.9");
-  const [status, setStatus] = useState("請先上傳「去背人車 PNG」，輸入價格數字，再按生成。");
+export default function Home(){
+  const refs=useRef<Partial<Record<Key,HTMLInputElement|null>>>({});
+  const [files,setFiles]=useState<Partial<Record<Key,File>>>({});
+  const [urls,setUrls]=useState<Partial<Record<Key,string>>>({});
+  const [result,setResult]=useState("");
+  const [status,setStatus]=useState("請上傳原始人車照 + 參考海報。這版不需要手動去背。");
+  const [loading,setLoading]=useState(false);
 
-  function pick(key: Key, file?: File) {
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setUrls((p) => ({ ...p, [key]: url }));
-    setStatus(`已上傳：${items.find((i) => i.key === key)?.label}`);
+  const [carModel,setCarModel]=useState("2025 NISSAN X-TRAIL 1.5T");
+  const [headline,setHeadline]=useState("新貨到");
+  const [jpText,setJpText]=useState("新入荷しました");
+  const [feature,setFeature]=useState("超值 / 輕油電 / 現省大價差");
+  const [price,setPrice]=useState("75.9");
+  const [extra,setExtra]=useState("請做成參考圖那種：大型銀色 hammered 金屬字、紅色速度光、黑色工業 showroom、底部紅黑車名條。");
+
+  const prompt=useMemo(()=>`【SOFU v4 真 AI 商業生成版】
+
+任務：
+請根據「原始人車照」製作一張台灣中古車 Facebook 4:3 橫式商業海報。
+「參考海報」只參考版型、光影、金屬字、紅色速度線、底部車名條、價格牌風格。
+不要學參考海報裡的車型。
+
+【輸出比例】
+必須橫式 4:3，完整海報，不可裁切大字、車頭、人物、價格、Logo、底部車名條。
+
+【主體】
+以原始人車照為主：
+- 車款外型要接近原圖
+- 人物要接近原圖
+- 人物可整理到右側，避免被車遮住
+- 不要出現半身、缺腳、手穿過車
+- 不要讓人跑到車頭外造成身體缺失
+
+【版型必須接近參考圖】
+只保留以下元素，不要增加其他內容：
+1. 左上紅色日文：${jpText}
+2. 上方巨大 hammered silver 3D 金屬字：${headline}
+3. 白色斜切資訊條：${feature}
+4. 右上牛皮紙價格牌：真的就賣！ ${price}萬
+5. 中央大車主視覺
+6. 人物在車右側或右後方，比例自然
+7. 底部紅黑資訊條：${carModel}
+8. 左下 SOFU Logo / Used Car Dealers
+
+【禁止多餘內容】
+禁止新增：
+- 右側功能列表
+- icon 清單
+- 保固說明框
+- 多個小框
+- 側邊欄
+- 無關中文
+- 無關英文
+- 亂碼
+- 多餘車輛資訊
+- 第二台主車
+- 卡通化、動畫感
+
+【視覺風格】
+黑色工業 showroom、濕亮反射地板、紅橘速度光、煙霧、車身反射、車頭壓迫感、強烈台灣中古車促銷風格。
+整體要像參考海報，而不是簡報或資訊圖。
+
+【文字要求】
+繁體中文與日文要清楚可讀，不要假字、不變形、不亂碼。
+英文車款使用粗體白字，底部紅黑條。
+
+【補充】
+${extra}
+`,[carModel,headline,jpText,feature,price,extra]);
+
+  function pick(key:Key,file?:File){
+    if(!file)return;
+    setFiles(p=>({...p,[key]:file}));
+    setUrls(p=>({...p,[key]:URL.createObjectURL(file)}));
   }
 
-  function drawMetalText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, size: number) {
-    ctx.save();
-    ctx.font = `900 ${size}px Microsoft JhengHei, Arial`;
-    ctx.lineJoin = "round";
-    ctx.lineWidth = 14;
-    ctx.strokeStyle = "#111";
-    ctx.strokeText(text, x + 7, y + 10);
-    const grad = ctx.createLinearGradient(0, y - size, 0, y + 20);
-    grad.addColorStop(0, "#ffffff");
-    grad.addColorStop(.35, "#d9d9d9");
-    grad.addColorStop(.55, "#777777");
-    grad.addColorStop(.75, "#f2f2f2");
-    grad.addColorStop(1, "#8a8a8a");
-    ctx.fillStyle = grad;
-    ctx.fillText(text, x, y);
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "#fff";
-    ctx.strokeText(text, x, y);
-    ctx.restore();
+  async function generate(){
+    if(!files.source||!files.style){setStatus("請至少上傳：原始人車照 + 參考海報");return;}
+    setLoading(true); setResult(""); setStatus("壓縮圖片中...");
+    try{
+      const fd=new FormData();
+      fd.append("source",await compressImage(files.source,1300,.74));
+      fd.append("style",await compressImage(files.style,1200,.72));
+      if(files.logo) fd.append("logo",await compressImage(files.logo,800,.75));
+      fd.append("prompt",prompt);
+      setStatus("AI 商業海報生成中，通常 30~90 秒...");
+      const res=await fetch("/api/generate-poster",{method:"POST",body:fd});
+      const text=await res.text();
+      let data:any; try{data=JSON.parse(text)}catch{throw new Error(text.slice(0,200))}
+      if(!res.ok||!data.imageUrl) throw new Error(data.error||"生成失敗");
+      setResult(data.imageUrl); setStatus("生成完成。若不夠像，調整補充要求再生成。");
+    }catch(e:any){setStatus("生成失敗："+(e?.message||"未知錯誤"))}
+    finally{setLoading(false)}
   }
 
-  async function renderPoster() {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    if (!urls.subject) {
-      setStatus("請先上傳去背人車 PNG。原圖 JPG 會有背景，v3 要用去背 PNG 才能保真合成。");
-      return;
-    }
-
-    setStatus("合成中：程式固定版型，不讓 AI 重畫人車...");
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const W = 1600, H = 1200;
-    canvas.width = W;
-    canvas.height = H;
-
-    // Background
-    const bg = ctx.createLinearGradient(0, 0, W, H);
-    bg.addColorStop(0, "#050505");
-    bg.addColorStop(.5, "#111");
-    bg.addColorStop(1, "#2a0000");
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, W, H);
-
-    // Wall panels
-    ctx.fillStyle = "#171717";
-    for (let i = 0; i < 9; i++) {
-      ctx.fillRect(120 + i * 180, 170, 150, 560);
-      ctx.strokeStyle = "rgba(255,255,255,.06)";
-      ctx.strokeRect(120 + i * 180, 170, 150, 560);
-    }
-
-    // Red speed lines
-    for (let i = 0; i < 16; i++) {
-      ctx.save();
-      ctx.translate(-120, 200 + i * 24);
-      ctx.rotate(-0.13);
-      const g = ctx.createLinearGradient(0, 0, W, 0);
-      g.addColorStop(0, "rgba(255,0,0,0)");
-      g.addColorStop(.25, "rgba(255,0,0,.9)");
-      g.addColorStop(.55, "rgba(255,120,30,.75)");
-      g.addColorStop(1, "rgba(255,0,0,0)");
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, W + 300, i % 3 === 0 ? 8 : 4);
-      ctx.restore();
-    }
-
-    // Floor
-    const floor = ctx.createLinearGradient(0, 720, 0, H);
-    floor.addColorStop(0, "#121212");
-    floor.addColorStop(1, "#030303");
-    ctx.fillStyle = floor;
-    ctx.fillRect(0, 720, W, 480);
-    ctx.strokeStyle = "rgba(255,255,255,.08)";
-    for (let y = 760; y < H; y += 60) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(W, y - 80);
-      ctx.stroke();
-    }
-
-    // Top-left Japanese text
-    ctx.save();
-    ctx.font = "900 86px Microsoft JhengHei, Arial";
-    ctx.fillStyle = "#e60012";
-    ctx.shadowColor = "rgba(0,0,0,.9)";
-    ctx.shadowBlur = 8;
-    ctx.fillText(jpText, 55, 120);
-    ctx.restore();
-
-    // White slanted feature bar
-    ctx.save();
-    ctx.translate(52, 166);
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(720, 0);
-    ctx.lineTo(680, 84);
-    ctx.lineTo(-30, 84);
-    ctx.closePath();
-    ctx.fillStyle = "#f8f8f8";
-    ctx.fill();
-    ctx.font = "900 48px Microsoft JhengHei, Arial";
-    ctx.fillStyle = "#080808";
-    ctx.fillText(feature, 28, 58);
-    ctx.restore();
-
-    // Giant metal title
-    drawMetalText(ctx, title, 650, 150, 170);
-
-    // Subject PNG
-    const subject = await loadImg(urls.subject);
-    const subjectW = 1180;
-    const ratio = subject.height / subject.width;
-    const subjectH = subjectW * ratio;
-    ctx.drawImage(subject, 150, 360, subjectW, subjectH);
-
-    // Price tag - v3.0.2 uses typed number only, no PNG upload needed
-    ctx.save();
-    ctx.translate(1040, 285);
-    ctx.rotate(-0.03);
-    ctx.fillStyle = "#d6aa63";
-    ctx.fillRect(0, 0, 360, 210);
-    ctx.strokeStyle = "#271300";
-    ctx.lineWidth = 5;
-    ctx.strokeRect(0, 0, 360, 210);
-    ctx.font = "900 48px Microsoft JhengHei";
-    ctx.fillStyle = "#111";
-    ctx.fillText("真的就賣！", 34, 62);
-    ctx.font = "900 100px Arial Black";
-    ctx.fillStyle = "#e60012";
-    ctx.fillText(priceText, 34, 160);
-    ctx.font = "900 42px Microsoft JhengHei";
-    ctx.fillText("萬", 260, 155);
-    ctx.restore();
-
-    // Bottom bar
-    const bar = ctx.createLinearGradient(0, 940, W, 940);
-    bar.addColorStop(0, "#260000");
-    bar.addColorStop(.25, "#9b0000");
-    bar.addColorStop(.55, "#151515");
-    bar.addColorStop(1, "#9b0000");
-    ctx.fillStyle = bar;
-    ctx.fillRect(0, 930, W, 160);
-
-    ctx.font = "900 96px Arial Black, Microsoft JhengHei";
-    ctx.fillStyle = "#fff";
-    ctx.shadowColor = "rgba(0,0,0,.8)";
-    ctx.shadowBlur = 8;
-    ctx.fillText(carModel, 70, 1035);
-    ctx.shadowBlur = 0;
-
-    // Logo
-    if (urls.logo) {
-      const logo = await loadImg(urls.logo);
-      ctx.drawImage(logo, 60, 1080, 350, 95);
-    } else {
-      ctx.font = "900 64px Arial Black";
-      ctx.fillStyle = "#fff";
-      ctx.fillText("SOFU", 72, 1138);
-      ctx.font = "700 28px Arial";
-      ctx.fillText("Used Car Dealers", 72, 1172);
-    }
-
-    // lower small selling points
-    ctx.font = "900 34px Microsoft JhengHei";
-    ctx.fillStyle = "#fff";
-    const pts = ["原車原漆", "實車實價", "專業團隊", "五大保證"];
-    pts.forEach((p, i) => ctx.fillText(p, 520 + i * 240, 1148));
-
-    setStatus("完成：v3 固定版型已合成。人車來自去背 PNG，沒有被 AI 重畫。");
+  function download(){
+    if(!result)return;
+    const a=document.createElement("a"); a.href=result; a.download=carModel.replaceAll(" ","_")+"_SOFU_v4.png"; a.click();
   }
 
-  function download() {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const a = document.createElement("a");
-    a.download = `${carModel.replaceAll(" ", "_")}_SOFU_v3.png`;
-    a.href = canvas.toDataURL("image/png");
-    a.click();
-  }
+  return <main className="page"><div className="wrap">
+    <div className="badge">🚗 SOFU 中古車 AI 商業生成系統 v4.0</div>
+    <h1 className="title">SOFU AI Poster Generator</h1>
+    <p className="sub">目標：讓你更快、更接近參考圖。不需手動去背，AI 重新生成商業海報；系統限制不要亂加多餘內容。</p>
 
-  return (
-    <main className="page">
-      <div className="wrap">
-        <div className="badge">🚗 SOFU 中古車 AI 商業合成系統 v3.0.2</div>
-        <h1 className="title">SOFU Fixed Template Composer v3.0.2</h1>
-        <p className="sub">v3 核心：不再讓 AI 重畫人車。請上傳「已去背的人車 PNG」，系統用固定 4:3 版型合成，中文字、Logo、價格牌都由 Canvas 程式渲染。價格不用上傳 PNG，直接輸入數字。</p>
+    <section className="grid">
+      <div className="card">
+        <h2 className="h"><Upload size={20}/> STEP 1｜上傳素材</h2>
+        <div className="notice">必上傳：原始人車照 + 參考海報。Logo 可選。價格不用傳圖，直接輸入數字。</div>
+        <div className="uploadGrid">
+          {items.map(item=><div key={item.key}>
+            <button className="upload" onClick={()=>refs.current[item.key]?.click()}>
+              {urls[item.key]?<img src={urls[item.key]} alt={item.label}/>:<span>{item.label}{item.required?" *":""}</span>}
+            </button>
+            <input hidden ref={el=>{refs.current[item.key]=el}} type="file" accept="image/*" onChange={e=>pick(item.key,e.target.files?.[0])}/>
+          </div>)}
+        </div>
 
-        <section className="grid">
-          <div className="card">
-            <h2 className="h"><ImagePlus size={21}/> STEP 1｜上傳素材</h2>
-            <div className="note">最重要：第一格必須上傳「去背人車 PNG」。若上傳原始 JPG，背景會一起被貼上，效果會差。</div>
-            <div className="uploadGrid">
-              {items.map((item) => (
-                <div key={item.key}>
-                  <button className="upload" onClick={() => refs.current[item.key]?.click()}>
-                    {urls[item.key] ? <img src={urls[item.key]} alt={item.label}/> : <span>{item.label}</span>}
-                  </button>
-                  <input
-                    hidden
-                    ref={(el)=>{refs.current[item.key]=el}}
-                    type="file"
-                    accept="image/*"
-                    onChange={(e)=>pick(item.key, e.target.files?.[0])}
-                  />
-                </div>
-              ))}
-            </div>
-
-            <h2 className="h" style={{marginTop:18}}>STEP 2｜文字內容</h2>
-            <Field label="車款" value={carModel} setValue={setCarModel}/>
-            <Field label="日文紅字" value={jpText} setValue={setJpText}/>
-            <Field label="巨大金屬字" value={title} setValue={setTitle}/>
-            <Field label="白色資訊條" value={feature} setValue={setFeature}/>
-            <Field label="價格" value={priceText} setValue={setPriceText}/>
-
-            <button className="btn" onClick={renderPoster}><Layers size={16}/> 生成 v3 固定版型</button>
-            <button className="btn2" onClick={download}><Download size={16}/> 下載 PNG</button>
-            <button className="btn2" onClick={renderPoster}><RefreshCw size={16}/> 重新合成</button>
-
-            <p className="small">下一階段 v3.1 可接 remove.bg / ClipDrop / Replicate BiRefNet，讓原始 JPG 自動變去背 PNG。</p>
-          </div>
-
-          <div className="card">
-            <h2 className="h">STEP 3｜4:3 海報輸出</h2>
-            <div className="canvasWrap">
-              <canvas ref={canvasRef} width={1600} height={1200}/>
-            </div>
-            <div className="note" style={{marginTop:12}}>{status}</div>
-            <div className="rules">
-              <div className="rule">✓ 人車不經 AI 重畫</div>
-              <div className="rule">✓ 4:3 固定版型</div>
-              <div className="rule">✓ 繁中程式渲染</div>
-              <div className="rule">✓ Logo 可疊圖 / 價格輸入數字</div>
-            </div>
-          </div>
-        </section>
+        <h2 className="h" style={{marginTop:18}}>STEP 2｜內容</h2>
+        <Field label="車款" value={carModel} setValue={setCarModel}/>
+        <Field label="主標" value={headline} setValue={setHeadline}/>
+        <Field label="日文紅字" value={jpText} setValue={setJpText}/>
+        <Field label="資訊條" value={feature} setValue={setFeature}/>
+        <Field label="價格" value={price} setValue={setPrice}/>
+        <label className="field"><span>補充要求</span><textarea value={extra} onChange={e=>setExtra(e.target.value)}/></label>
+        <button className="btn" disabled={loading} onClick={generate}><Wand2 size={16}/> {loading?"生成中...":"生成海報"}</button>
+        <button className="btn2" onClick={download}><Download size={16}/> 下載海報</button>
       </div>
-    </main>
-  );
+
+      <div className="card">
+        <h2 className="h">STEP 3｜結果</h2>
+        <div className="box"><div className="boxTitle">AI 商業海報結果</div><div className="boxImg">{result?<img src={result}/>:loading?<div className="spin"/>:"尚未生成"}</div></div>
+        <div className="status">{status}</div>
+      </div>
+
+      <div className="card">
+        <h2 className="h"><ShieldCheck size={20}/> v4 規則</h2>
+        <div className="rule">✓ 不用手動去背</div>
+        <div className="rule">✓ 只上傳原圖 + 參考海報</div>
+        <div className="rule">✓ 價格直接輸入</div>
+        <div className="rule">✓ 禁止多餘 icon / 側欄 / 功能框</div>
+        <div className="rule">✓ 目標接近參考圖</div>
+        <h2 className="h" style={{marginTop:18}}>Prompt</h2>
+        <div className="prompt">{prompt}</div>
+      </div>
+    </section>
+  </div></main>
 }
 
-function Field({ label, value, setValue }: { label: string; value: string; setValue: (v: string) => void }) {
-  return (
-    <label className="field">
-      <span>{label}</span>
-      <input value={value} onChange={(e) => setValue(e.target.value)} />
-    </label>
-  );
+function Field({label,value,setValue}:{label:string;value:string;setValue:(v:string)=>void}){
+  return <label className="field"><span>{label}</span><input value={value} onChange={e=>setValue(e.target.value)}/></label>
 }
