@@ -1,7 +1,10 @@
 {
   "functions": {
-    "app/api/generate-poster/route.ts": {
+    "app/api/generate-background/route.ts": {
       "maxDuration": 300
+    },
+    "app/api/remove-bg/route.ts": {
+      "maxDuration": 60
     }
   }
 }

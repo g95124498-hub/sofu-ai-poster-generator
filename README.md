@@ -1,10 +1,17 @@
-# SOFU AI Poster Generator v4.0
+# SOFU AI Poster Generator v6.0
 
-v4 真 AI 商業生成版：
-- 不需手動去背
-- 上傳原始人車照
-- 上傳參考海報
-- 可上傳 Logo
-- 價格直接輸入數字
-- 用 OpenAI Images API 重新生成商業海報
-- Prompt 限制不要多餘 icon / 功能框 / 側欄
+v6 一鍵中古車商業海報生產線。
+
+## 需要的 Vercel Environment Variables
+
+OPENAI_API_KEY=你的 OpenAI API Key
+REMOVE_BG_API_KEY=你的 remove.bg API Key
+
+## v6 流程
+
+1. 上傳原始人車照
+2. 系統自動去背
+3. AI 只生成 showroom 背景
+4. Canvas 合成原本人車
+5. Canvas 產生繁體中文、價格牌、Logo、車牌
+6. 輸出 4:3 PNG
