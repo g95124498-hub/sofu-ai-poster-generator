@@ -1,3 +1,3 @@
-# SOFU AI Poster Generator v2.1
+# SOFU AI Poster Generator v2.2
 
-修正：圖片送出前自動壓縮，避免 Request Entity Too Large / JSON parse error。
+修正：延長 API route 執行時間，並改用 1024x1024 測試尺寸，減少 timeout。

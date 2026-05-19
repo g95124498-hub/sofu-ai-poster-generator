@@ -16,7 +16,7 @@ const uploadItems: { key: UploadKey; label: string; required?: boolean }[] = [
 ];
 
 const sizes = [
-  { id: "fb43", label: "FB 橫式 4:3", apiSize: "1536x1024" },
+  { id: "fb43", label: "FB 橫式 4:3 測試版", apiSize: "1024x1024" },
   { id: "square", label: "方形 1:1", apiSize: "1024x1024" },
   { id: "story", label: "直式 9:16", apiSize: "1024x1536" }
 ];
@@ -64,7 +64,7 @@ export default function Home() {
   const selectedSize = sizes.find((x) => x.id === sizeId) || sizes[0];
 
   const prompt = useMemo(() => {
-    return `【SOFU v2.1 保真商業合成系統】
+    return `【SOFU v2.2 保真商業合成系統】
 
 最重要：
 上傳的「原始人車照」是唯一主體來源。
@@ -163,9 +163,9 @@ export default function Home() {
   return (
     <main className="page">
       <div className="wrap">
-        <div className="badge">🚗 SOFU 中古車 AI 商業合成系統 v2.1</div>
+        <div className="badge">🚗 SOFU 中古車 AI 商業合成系統 v2.2</div>
         <h1 className="title">SOFU AI Poster Generator</h1>
-        <p className="sub">v2.1 修正：上傳前自動壓縮圖片，避免 Request Entity Too Large / JSON 解析錯誤。</p>
+        <p className="sub">v2.2 修正：延長 API 時間 + 預設 1024 測試，避免 Request Entity Too Large / JSON 解析錯誤。</p>
 
         <section className="grid">
           <div className="card">
