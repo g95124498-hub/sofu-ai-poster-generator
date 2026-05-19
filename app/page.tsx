@@ -3,10 +3,11 @@
 import { useMemo, useRef, useState } from "react";
 import { Upload, Wand2, Download, Layers, ShieldCheck, RefreshCw } from "lucide-react";
 
-type Key = "source" | "style" | "logo" | "plate" | "face";
+type Key = "source" | "style" | "logo" | "plate" | "face" | "cutout";
 const items: { key: Key; label: string; required?: boolean }[] = [
   { key: "source", label: "原始人車照", required: true },
   { key: "style", label: "參考海報", required: true },
+  { key: "cutout", label: "去背人車 PNG 備援" },
   { key: "face", label: "人臉參考圖" },
   { key: "logo", label: "SOFU Logo PNG" },
   { key: "plate", label: "車牌 PNG" }
@@ -54,7 +55,7 @@ export default function Home() {
   const [backgroundUrl, setBackgroundUrl] = useState("");
   const [status, setStatus] = useState("v7 節點式合成：上傳原始人車照 + 參考海報，按一鍵生成。");
   const [loading, setLoading] = useState(false);
-  const [debug, setDebug] = useState<string[]>(["v8.1 Debug 面板已啟用。"]);
+  const [debug, setDebug] = useState<string[]>(["v8.2 Debug 面板已啟用。"]);
   const addDebug = (line: string) => setDebug((p) => [`${new Date().toLocaleTimeString()}  ${line}`, ...p].slice(0, 16));
 
   const [carModel, setCarModel] = useState("2025 NISSAN X-TRAIL 1.5T");
@@ -192,6 +193,12 @@ ${extra}`, [extra]);
   }
 
   async function removeBg() {
+    if (urls.cutout) {
+      addDebug("使用手動去背 PNG 備援，不呼叫 remove.bg。");
+      setCutoutUrl(urls.cutout);
+      return urls.cutout;
+    }
+
     if (!files.source) throw new Error("請先上傳原始人車照");
     const formData = new FormData();
     formData.append("image", await compressImage(files.source, 1500, 0.78));
@@ -199,7 +206,9 @@ ${extra}`, [extra]);
     const res = await fetch("/api/remove-bg", { method: "POST", body: formData });
     const data = await res.json();
     addDebug(`remove-bg HTTP ${res.status}`);
-    if (!res.ok || !data.imageUrl) throw new Error(data.error || "去背失敗");
+    if (!res.ok || !data.imageUrl) {
+      throw new Error((data.error || "去背失敗") + "；也可以先上傳「去背人車 PNG 備援」。");
+    }
     setCutoutUrl(data.imageUrl);
     return data.imageUrl as string;
   }
@@ -308,7 +317,7 @@ ${extra}`, [extra]);
     ctx.restore();
 
 
-    // v8.1 subject integration highlights
+    // v8.2 subject integration highlights
     ctx.save();
     ctx.globalCompositeOperation = "screen";
     const rim = ctx.createLinearGradient(0, 420, 1400, 860);
@@ -412,8 +421,8 @@ ${extra}`, [extra]);
     } catch (error: any) {
       const msg = String(error?.message || "");
       if (msg.includes("REMOVE_BG_API_KEY") || msg.includes("remove.bg") || msg.includes("去背")) {
-        setStatus("v8.1 主體鎖定模式需要 REMOVE_BG_API_KEY。請先到 Vercel Environment Variables 新增 REMOVE_BG_API_KEY，否則無法保留真人真車。");
-        addDebug("v8.1 已停止 AI 備援：為了避免車型/人臉跑掉，本版要求先完成自動去背。");
+        setStatus("v8.2 主體鎖定建議 REMOVE_BG_API_KEY，或上傳去背人車 PNG 備援，或請上傳「去背人車 PNG 備援」。這樣仍可保留真人真車，不走 AI 亂生圖。");
+        addDebug("v8.2 已停止 AI 備援：請設定 remove.bg key，或上傳去背 PNG 備援。");
       } else {
         setStatus("生成失敗：" + (error?.message || "未知錯誤"));
       }
@@ -454,14 +463,14 @@ ${extra}`, [extra]);
   return (
     <main className="page">
       <div className="wrap">
-        <div className="badge">🚗 SOFU v8.1 主體鎖定商業合成引擎</div>
-        <h1 className="title">SOFU Subject Lock Engine v8.1</h1>
-        <p className="sub">v8.1 核心：AI 只生成背景；真人真車由自動去背主體貼回；中文字、價格、Logo、車牌全部由程式合成。</p>
+        <div className="badge">🚗 SOFU v8.2 主體鎖定＋手動去背備援版</div>
+        <h1 className="title">SOFU Subject Lock Engine v8.2</h1>
+        <p className="sub">v8.2 核心：AI 只生成背景；真人真車由自動去背或手動去背 PNG 貼回；中文字、價格、Logo、車牌全部由程式合成。</p>
 
         <section className="grid">
           <div className="card">
             <h2 className="h"><Upload size={20}/> STEP 1｜上傳素材</h2>
-            <div className="notice">OPENAI_API_KEY 與 REMOVE_BG_API_KEY 都需要。v8.1 不再使用 AI 備援亂生圖，目標是保留真人真車。</div>
+            <div className="notice">OPENAI_API_KEY 必要。REMOVE_BG_API_KEY 建議設定；如果還沒有 key，可上傳「去背人車 PNG 備援」照樣走主體鎖定。</div>
             <div className="uploadGrid">
               {items.map((item) => (
                 <div key={item.key}>
@@ -494,7 +503,7 @@ ${extra}`, [extra]);
 
             <label className="field"><span>背景補充要求</span><textarea value={extra} onChange={(e) => setExtra(e.target.value)}/></label>
 
-            <button className="btn" disabled={loading} onClick={oneClick}><Wand2 size={16}/> {loading ? "生成中..." : "一鍵生成 v8.1"}</button>
+            <button className="btn" disabled={loading} onClick={oneClick}><Wand2 size={16}/> {loading ? "生成中..." : "一鍵生成 v8.2"}</button>
             <button className="btn2" onClick={checkHealth}>檢查 API Key 狀態</button>
             <button className="btn2" onClick={recompositeOnly}><RefreshCw size={16}/> 只重新合成位置</button>
             <button className="btn2" onClick={download}><Download size={16}/> 下載 PNG</button>
@@ -523,7 +532,7 @@ ${extra}`, [extra]);
             <div className="status" style={{fontSize:12, maxHeight:260, overflow:"auto"}}>
               {debug.map((line, i) => <div key={i}>{line}</div>)}
             </div>
-            <p className="small">v8.1 必須使用自動去背，才能真正保留原車與真人。這版不再走 AI 完整海報備援，避免車型與人臉跑掉。</p>
+            <p className="small">v8.2 可用兩種主體鎖定方式：① remove.bg 自動去背；② 手動上傳去背 PNG 備援。都不會讓 AI 重畫車與人。</p>
           </div>
         </section>
       </div>
