@@ -65,6 +65,30 @@ export default function Home() {
   const [subjectW, setSubjectW] = useState("1420");
   const [bottomTitleSize, setBottomTitleSize] = useState("88");
 
+  const fullPrompt = useMemo(() => `【SOFU v6.2 備援 AI 商業生成模式】
+
+當自動去背 API 未設定時，請直接根據「原始人車照」與「參考海報」生成一張 4:3 橫式中古車商業海報。
+
+重要：
+- 參考海報只學排版、燈光、黑色工業 showroom、紅橘速度線、金屬字、底部紅黑車名條。
+- 不要學參考海報的車型。
+- 原始人車照是主體來源，車型、車色、人物姿勢盡量接近原圖。
+- 不要出現多餘 icon、功能清單、側欄、小框、無關文案。
+- 繁體中文與日文要清楚，不要亂碼。
+- 人物不可缺腳、不可半身、不可被車吃掉。
+- 車頭要有壓迫感，接近參考圖風格。
+
+固定文字：
+左上日文：${jpText}
+巨大金屬字：${headline}
+白色資訊條：${feature}
+價格牌：真的就賣！ ${price}萬
+底部車款：${carModel}
+
+補充：
+${extra}
+`, [carModel, headline, jpText, feature, price, extra]);
+
   const bgPrompt = useMemo(() => `只根據參考海報生成「背景與氣氛」，不要生成任何車、人物、價格、Logo、中文字。
 請輸出 4:3 橫式背景：
 - 黑色高級工業 showroom
@@ -311,17 +335,53 @@ ${extra}`, [extra]);
     setStatus("完成：v6 已自動去背、AI 生成背景、程式合成真中文字與價格。");
   }
 
+
+  async function generateFullFallback() {
+    if (!files.source || !files.style) throw new Error("請先上傳原始人車照與參考海報");
+    const formData = new FormData();
+    formData.append("source", await compressImage(files.source, 1300, 0.74));
+    formData.append("style", await compressImage(files.style, 1200, 0.72));
+    if (files.logo) formData.append("logo", await compressImage(files.logo, 800, 0.75));
+    formData.append("prompt", fullPrompt);
+
+    const res = await fetch("/api/generate-full", { method: "POST", body: formData });
+    const data = await res.json();
+    if (!res.ok || !data.imageUrl) throw new Error(data.error || "AI 備援生成失敗");
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const W = 1600, H = 1200;
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d")!;
+    const img = await loadImage(data.imageUrl);
+    ctx.drawImage(img, 0, 0, W, H);
+
+    setBackgroundUrl(data.imageUrl);
+    setStatus("完成：目前未使用 remove.bg，自動改用 v6.2 AI 商業生成備援模式。若要更保真人車，之後再設定 REMOVE_BG_API_KEY。");
+  }
+
   async function oneClick() {
     setLoading(true);
     try {
-      setStatus("步驟 1/3：自動去背中...");
+      setStatus("步驟 1/3：嘗試自動去背中...");
       const subject = await removeBg();
       setStatus("步驟 2/3：AI 生成 showroom 背景中...");
       const bg = await generateBackground();
       setStatus("步驟 3/3：Canvas 商業合成中...");
       await compose(bg, subject);
     } catch (error: any) {
-      setStatus("生成失敗：" + (error?.message || "未知錯誤"));
+      const msg = String(error?.message || "");
+      if (msg.includes("REMOVE_BG_API_KEY") || msg.includes("remove.bg") || msg.includes("去背")) {
+        setStatus("偵測到 remove.bg 尚未設定，改用 v6.2 備援模式：AI 直接生成完整商業海報...");
+        try {
+          await generateFullFallback();
+        } catch (fallbackError: any) {
+          setStatus("備援生成失敗：" + (fallbackError?.message || "未知錯誤"));
+        }
+      } else {
+        setStatus("生成失敗：" + (error?.message || "未知錯誤"));
+      }
     } finally {
       setLoading(false);
     }
@@ -339,14 +399,14 @@ ${extra}`, [extra]);
   return (
     <main className="page">
       <div className="wrap">
-        <div className="badge">🚗 SOFU v6.1 真人車鎖定商業海報生產線</div>
-        <h1 className="title">SOFU AI Production Line v6.1</h1>
-        <p className="sub">v6.1 流程：原始照片自動去背 → AI 只做 showroom 背景 → 原本人車貼回 → 程式產生繁體中文、價格牌、Logo、車牌。</p>
+        <div className="badge">🚗 SOFU v6.2 免去背 Key 備援商業海報生產線</div>
+        <h1 className="title">SOFU AI Production Line v6.2</h1>
+        <p className="sub">v6.2 流程：有 remove.bg key 走自動去背合成；沒有 key 會自動改走 AI 商業生成備援 → AI 只做 showroom 背景 → 原本人車貼回 → 程式產生繁體中文、價格牌、Logo、車牌。</p>
 
         <section className="grid">
           <div className="card">
             <h2 className="h"><Upload size={20}/> STEP 1｜上傳素材</h2>
-            <div className="notice">必須設定 Vercel 環境變數：OPENAI_API_KEY 和 REMOVE_BG_API_KEY。第一格直接上傳原始人車照，不用手動去背。</div>
+            <div className="notice">至少必須設定 OPENAI_API_KEY。REMOVE_BG_API_KEY 可選：有設定會自動去背合成；沒設定會自動改用 AI 商業生成備援。</div>
             <div className="uploadGrid">
               {items.map((item) => (
                 <div key={item.key}>
@@ -379,7 +439,7 @@ ${extra}`, [extra]);
 
             <label className="field"><span>背景補充要求</span><textarea value={extra} onChange={(e) => setExtra(e.target.value)}/></label>
 
-            <button className="btn" disabled={loading} onClick={oneClick}><Wand2 size={16}/> {loading ? "生成中..." : "一鍵生成 v6.1"}</button>
+            <button className="btn" disabled={loading} onClick={oneClick}><Wand2 size={16}/> {loading ? "生成中..." : "一鍵生成 v6.2"}</button>
             <button className="btn2" onClick={download}><Download size={16}/> 下載 PNG</button>
           </div>
 
@@ -397,12 +457,12 @@ ${extra}`, [extra]);
 
           <div className="card">
             <h2 className="h"><ShieldCheck size={20}/> v6 核心規則</h2>
-            <div className="rule">✓ 原始人車照不用手動去背</div>
+            <div className="rule">✓ 沒有 REMOVE_BG_API_KEY 也可以先生成</div>
             <div className="rule">✓ AI 不再生成中文字與價格</div>
-            <div className="rule">✓ 車與人物由去背主體貼回，可手動微調位置</div>
+            <div className="rule">✓ 有 remove.bg key 時，車與人物由去背主體貼回</div>
             <div className="rule">✓ 背景才交給 AI 生成</div>
             <div className="rule">✓ 4:3 固定輸出</div>
-            <p className="small">v6.1 增加人車位置微調、速度線後製、煙霧後製，先讓版型更接近參考圖。</p>
+            <p className="small">v6.2 新增免 remove.bg key 備援：沒有去背 key 也能先用 AI 商業生成模式測試。</p>
           </div>
         </section>
       </div>

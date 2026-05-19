@@ -1,14 +1,13 @@
-# SOFU AI Poster Generator v6.1
-
-v6.1 真人車鎖定商業海報生產線。
+# SOFU AI Poster Generator v6.2
 
 新增：
-- 人車 X/Y/寬度微調
-- 底部車名字級微調
-- 程式後製紅橘速度線
-- 程式後製煙霧與暗角
-- AI 只生成背景，不生成車人文字
+- 免 REMOVE_BG_API_KEY 備援模式
+- 有 remove.bg key：自動去背 + AI 背景 + Canvas 合成
+- 沒 remove.bg key：自動改用 AI 商業生成完整海報
+- 保留 v6.1 的人車位置微調欄位
 
-需要 Vercel Environment Variables：
+必要環境變數：
 OPENAI_API_KEY
+
+選用環境變數：
 REMOVE_BG_API_KEY

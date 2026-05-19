@@ -1,6 +1,6 @@
 {
-  "name": "sofu-ai-poster-generator-v61-lock-layout",
-  "version": "6.1.0",
+  "name": "sofu-ai-poster-generator-v62-no-removebg-fallback",
+  "version": "6.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
