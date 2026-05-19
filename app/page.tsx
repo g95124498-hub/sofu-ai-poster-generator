@@ -60,6 +60,10 @@ export default function Home() {
   const [feature, setFeature] = useState("超值 / 輕油電 / 現省大價差");
   const [price, setPrice] = useState("75.9");
   const [extra, setExtra] = useState("參考圖風格：黑色工業 showroom、紅橘速度光、濕亮反射地板、煙霧、厚重金屬字氛圍。背景不要出現車或人物。");
+  const [subjectX, setSubjectX] = useState("55");
+  const [subjectY, setSubjectY] = useState("300");
+  const [subjectW, setSubjectW] = useState("1420");
+  const [bottomTitleSize, setBottomTitleSize] = useState("88");
 
   const bgPrompt = useMemo(() => `只根據參考海報生成「背景與氣氛」，不要生成任何車、人物、價格、Logo、中文字。
 請輸出 4:3 橫式背景：
@@ -71,6 +75,7 @@ export default function Home() {
 - 左側斜切黑色金屬牆
 - 高級台灣中古車廣告氛圍
 禁止出現：車輛、人物、假中文字、價格、Logo。
+背景要像參考海報，但保持乾淨，讓程式後製疊上真車、真人、真中文字。
 ${extra}`, [extra]);
 
   function pick(key: Key, file?: File) {
@@ -148,11 +153,11 @@ ${extra}`, [extra]);
 
     // Main subject
     const subject = await loadImage(subjectUrl);
-    const targetW = 1240;
+    const targetW = Number(subjectW) || 1420;
     const ratio = subject.height / subject.width;
     const targetH = targetW * ratio;
-    const x = 95;
-    const y = 360;
+    const x = Number(subjectX) || 55;
+    const y = Number(subjectY) || 300;
 
     // shadow
     ctx.save();
@@ -160,7 +165,7 @@ ${extra}`, [extra]);
     ctx.filter = "blur(18px)";
     ctx.fillStyle = "rgba(0,0,0,.85)";
     ctx.beginPath();
-    ctx.ellipse(700, 895, 520, 70, 0, 0, Math.PI * 2);
+    ctx.ellipse(760, 900, 610, 80, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
@@ -183,6 +188,35 @@ ${extra}`, [extra]);
     glow.addColorStop(1, "rgba(255,0,0,0)");
     ctx.fillStyle = glow;
     ctx.fillRect(850, 440, 620, 400);
+    ctx.restore();
+
+
+    // v6.1 programmed commercial speed lines overlay
+    ctx.save();
+    for (let i = 0; i < 15; i++) {
+      ctx.translate(0, 0);
+      ctx.beginPath();
+      ctx.moveTo(-120, 250 + i * 22);
+      ctx.lineTo(1600, 40 + i * 20);
+      ctx.strokeStyle = i % 3 === 0 ? "rgba(255,40,0,.55)" : "rgba(255,115,20,.32)";
+      ctx.lineWidth = i % 3 === 0 ? 6 : 3;
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // v6.1 low smoke and vignette
+    ctx.save();
+    const smoke = ctx.createRadialGradient(250, 780, 0, 250, 780, 520);
+    smoke.addColorStop(0, "rgba(255,255,255,.16)");
+    smoke.addColorStop(.45, "rgba(150,150,150,.08)");
+    smoke.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = smoke;
+    ctx.fillRect(0, 520, W, 420);
+    const vignette = ctx.createRadialGradient(W/2, H/2, 250, W/2, H/2, 900);
+    vignette.addColorStop(0, "rgba(0,0,0,0)");
+    vignette.addColorStop(1, "rgba(0,0,0,.48)");
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, W, H);
     ctx.restore();
 
     // Japanese red text
@@ -246,7 +280,7 @@ ${extra}`, [extra]);
     ctx.strokeRect(0, 930, W, 160);
 
     ctx.save();
-    ctx.font = "900 88px Arial Black, Microsoft JhengHei";
+    ctx.font = `900 ${Number(bottomTitleSize) || 88}px Arial Black, Microsoft JhengHei`;
     ctx.fillStyle = "#fff";
     ctx.shadowColor = "rgba(0,0,0,.9)";
     ctx.shadowBlur = 8;
@@ -305,9 +339,9 @@ ${extra}`, [extra]);
   return (
     <main className="page">
       <div className="wrap">
-        <div className="badge">🚗 SOFU v6 一鍵中古車商業海報生產線</div>
-        <h1 className="title">SOFU AI Production Line</h1>
-        <p className="sub">v6 流程：原始照片自動去背 → AI 只做 showroom 背景 → 原本人車貼回 → 程式產生繁體中文、價格牌、Logo、車牌。</p>
+        <div className="badge">🚗 SOFU v6.1 真人車鎖定商業海報生產線</div>
+        <h1 className="title">SOFU AI Production Line v6.1</h1>
+        <p className="sub">v6.1 流程：原始照片自動去背 → AI 只做 showroom 背景 → 原本人車貼回 → 程式產生繁體中文、價格牌、Logo、車牌。</p>
 
         <section className="grid">
           <div className="card">
@@ -336,9 +370,16 @@ ${extra}`, [extra]);
             <Field label="左上日文" value={jpText} setValue={setJpText}/>
             <Field label="白色資訊條" value={feature} setValue={setFeature}/>
             <Field label="價格數字" value={price} setValue={setPrice}/>
+
+            <h2 className="h" style={{marginTop:18}}>STEP 2.5｜主體位置微調</h2>
+            <Field label="人車 X 位置" value={subjectX} setValue={setSubjectX}/>
+            <Field label="人車 Y 位置" value={subjectY} setValue={setSubjectY}/>
+            <Field label="人車寬度" value={subjectW} setValue={setSubjectW}/>
+            <Field label="底部車名字級" value={bottomTitleSize} setValue={setBottomTitleSize}/>
+
             <label className="field"><span>背景補充要求</span><textarea value={extra} onChange={(e) => setExtra(e.target.value)}/></label>
 
-            <button className="btn" disabled={loading} onClick={oneClick}><Wand2 size={16}/> {loading ? "生成中..." : "一鍵生成 v6"}</button>
+            <button className="btn" disabled={loading} onClick={oneClick}><Wand2 size={16}/> {loading ? "生成中..." : "一鍵生成 v6.1"}</button>
             <button className="btn2" onClick={download}><Download size={16}/> 下載 PNG</button>
           </div>
 
@@ -358,10 +399,10 @@ ${extra}`, [extra]);
             <h2 className="h"><ShieldCheck size={20}/> v6 核心規則</h2>
             <div className="rule">✓ 原始人車照不用手動去背</div>
             <div className="rule">✓ AI 不再生成中文字與價格</div>
-            <div className="rule">✓ 車與人物由去背主體貼回</div>
+            <div className="rule">✓ 車與人物由去背主體貼回，可手動微調位置</div>
             <div className="rule">✓ 背景才交給 AI 生成</div>
             <div className="rule">✓ 4:3 固定輸出</div>
-            <p className="small">若 remove.bg 去背不準，下一版可改接 BiRefNet / Replicate，更適合車輛輪廓。</p>
+            <p className="small">v6.1 增加人車位置微調、速度線後製、煙霧後製，先讓版型更接近參考圖。</p>
           </div>
         </section>
       </div>

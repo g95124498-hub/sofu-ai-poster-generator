@@ -1,6 +1,6 @@
 {
-  "name": "sofu-ai-poster-generator-v60-production-line",
-  "version": "6.0.0",
+  "name": "sofu-ai-poster-generator-v61-lock-layout",
+  "version": "6.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
