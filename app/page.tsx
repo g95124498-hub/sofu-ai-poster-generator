@@ -54,6 +54,8 @@ export default function Home() {
   const [backgroundUrl, setBackgroundUrl] = useState("");
   const [status, setStatus] = useState("v7 節點式合成：上傳原始人車照 + 參考海報，按一鍵生成。");
   const [loading, setLoading] = useState(false);
+  const [debug, setDebug] = useState<string[]>(["v7.1 Debug 面板已啟用。"]);
+  const addDebug = (line: string) => setDebug((p) => [`${new Date().toLocaleTimeString()}  ${line}`, ...p].slice(0, 16));
 
   const [carModel, setCarModel] = useState("2025 NISSAN X-TRAIL 1.5T");
   const [headline, setHeadline] = useState("新貨到");
@@ -193,8 +195,10 @@ ${extra}`, [extra]);
     if (!files.source) throw new Error("請先上傳原始人車照");
     const formData = new FormData();
     formData.append("image", await compressImage(files.source, 1500, 0.78));
+    addDebug("呼叫 /api/remove-bg...");
     const res = await fetch("/api/remove-bg", { method: "POST", body: formData });
     const data = await res.json();
+    addDebug(`remove-bg HTTP ${res.status}`);
     if (!res.ok || !data.imageUrl) throw new Error(data.error || "去背失敗");
     setCutoutUrl(data.imageUrl);
     return data.imageUrl as string;
@@ -205,8 +209,10 @@ ${extra}`, [extra]);
     const formData = new FormData();
     formData.append("style", await compressImage(files.style, 1200, 0.72));
     formData.append("prompt", bgPrompt);
+    addDebug("呼叫 /api/generate-background...");
     const res = await fetch("/api/generate-background", { method: "POST", body: formData });
     const data = await res.json();
+    addDebug(`generate-background HTTP ${res.status}，耗時 ${data.elapsedMs || 0}ms`);
     if (!res.ok || !data.imageUrl) throw new Error(data.error || "背景生成失敗");
     setBackgroundUrl(data.imageUrl);
     return data.imageUrl as string;
@@ -221,8 +227,12 @@ ${extra}`, [extra]);
     if (files.face) formData.append("face", await compressImage(files.face, 700, 0.75));
     formData.append("prompt", fullFallbackPrompt);
 
+    addDebug("呼叫 /api/generate-full...");
     const res = await fetch("/api/generate-full", { method: "POST", body: formData });
-    const data = await res.json();
+    const raw = await res.text();
+    let data: any;
+    try { data = JSON.parse(raw); } catch { throw new Error("API 回傳不是 JSON：" + raw.slice(0, 180)); }
+    addDebug(`generate-full HTTP ${res.status}，耗時 ${data.elapsedMs || 0}ms`);
     if (!res.ok || !data.imageUrl) throw new Error(data.error || "AI 備援生成失敗");
 
     const canvas = canvasRef.current;
@@ -412,6 +422,18 @@ ${extra}`, [extra]);
     await compose(backgroundUrl, cutoutUrl);
   }
 
+
+  async function checkHealth() {
+    try {
+      const res = await fetch("/api/health");
+      const data = await res.json();
+      addDebug(`Health：OPENAI_API_KEY=${data.openaiKey ? "OK" : "未設定"}，REMOVE_BG_API_KEY=${data.removeBgKey ? "OK" : "未設定"}`);
+      setStatus(`API 檢查：OPENAI_API_KEY=${data.openaiKey ? "已設定" : "未設定"}；REMOVE_BG_API_KEY=${data.removeBgKey ? "已設定" : "未設定"}`);
+    } catch (e: any) {
+      addDebug("Health 檢查失敗：" + (e?.message || "未知錯誤"));
+    }
+  }
+
   function download() {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -424,8 +446,8 @@ ${extra}`, [extra]);
   return (
     <main className="page">
       <div className="wrap">
-        <div className="badge">🚗 SOFU v7 節點式中古車商業視覺引擎</div>
-        <h1 className="title">SOFU Layered Poster Engine v7</h1>
+        <div className="badge">🚗 SOFU v7.1 Debug 節點式中古車商業視覺引擎</div>
+        <h1 className="title">SOFU Layered Poster Engine v7.1</h1>
         <p className="sub">v7 核心：AI 不再一張圖打天下。AI 只做背景，真實人車貼回，中文字、價格、Logo、車牌由程式合成。</p>
 
         <section className="grid">
@@ -464,7 +486,8 @@ ${extra}`, [extra]);
 
             <label className="field"><span>背景補充要求</span><textarea value={extra} onChange={(e) => setExtra(e.target.value)}/></label>
 
-            <button className="btn" disabled={loading} onClick={oneClick}><Wand2 size={16}/> {loading ? "生成中..." : "一鍵生成 v7"}</button>
+            <button className="btn" disabled={loading} onClick={oneClick}><Wand2 size={16}/> {loading ? "生成中..." : "一鍵生成 v7.1"}</button>
+            <button className="btn2" onClick={checkHealth}>檢查 API Key 狀態</button>
             <button className="btn2" onClick={recompositeOnly}><RefreshCw size={16}/> 只重新合成位置</button>
             <button className="btn2" onClick={download}><Download size={16}/> 下載 PNG</button>
           </div>
@@ -488,6 +511,10 @@ ${extra}`, [extra]);
             <div className="rule">✓ NODE 3：AI 只生成背景</div>
             <div className="rule">✓ NODE 4：Canvas 真字與價格牌</div>
             <div className="rule">✓ NODE 5：陰影、反射、速度線後製</div>
+            <h2 className="h" style={{marginTop:18}}>Debug 面板</h2>
+            <div className="status" style={{fontSize:12, maxHeight:260, overflow:"auto"}}>
+              {debug.map((line, i) => <div key={i}>{line}</div>)}
+            </div>
             <p className="small">有 remove.bg key 時才會真正保留真人車。沒有 key 時會進 AI 備援模式，方便先測試流程。</p>
           </div>
         </section>

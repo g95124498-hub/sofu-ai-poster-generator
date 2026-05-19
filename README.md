@@ -1,14 +1,13 @@
-# SOFU AI Poster Generator v7.0
+# SOFU AI Poster Generator v7.1
 
-v7 節點式中古車商業視覺引擎。
+v7.1 新增 Debug 面板。
 
-核心：
-- AI 不再負責整張圖
-- 有 REMOVE_BG_API_KEY 時：原始人車自動去背，真實主體貼回
-- AI 只生成背景
-- Canvas 產生真中文字、價格牌、Logo、車牌
-- 程式後製速度線、煙霧、陰影、反射
-- 可微調人車 / 價格牌 / 金屬字 / Logo 位置
+新增：
+- 檢查 OPENAI_API_KEY / REMOVE_BG_API_KEY 狀態
+- 顯示 API HTTP 狀態碼
+- 顯示 OpenAI 圖片生成耗時
+- 顯示更清楚的 Billing / API Key / Rate Limit 錯誤
+- 保留 v7 節點式合成架構
 
 必要：
 OPENAI_API_KEY
