@@ -1,16 +1,16 @@
-# SOFU AI Poster Generator v7.1
+# SOFU AI Poster Generator v8.1
 
-v7.1 新增 Debug 面板。
+v8.1 主體鎖定商業合成引擎。
 
-新增：
-- 檢查 OPENAI_API_KEY / REMOVE_BG_API_KEY 狀態
-- 顯示 API HTTP 狀態碼
-- 顯示 OpenAI 圖片生成耗時
-- 顯示更清楚的 Billing / API Key / Rate Limit 錯誤
-- 保留 v7 節點式合成架構
+核心改變：
+- 不再使用 AI 完整海報備援
+- 需要 OPENAI_API_KEY 與 REMOVE_BG_API_KEY
+- AI 只生成純背景
+- 原始真人真車自動去背後貼回
+- 中文字、價格牌、Logo、車牌由 Canvas 後製
+- 強化速度線、煙霧、接地陰影、反射、融合光
+- 預設人車位置放大，更接近參考圖
 
-必要：
+Vercel Environment Variables：
 OPENAI_API_KEY
-
-選用但建議：
 REMOVE_BG_API_KEY

@@ -54,7 +54,7 @@ export default function Home() {
   const [backgroundUrl, setBackgroundUrl] = useState("");
   const [status, setStatus] = useState("v7 節點式合成：上傳原始人車照 + 參考海報，按一鍵生成。");
   const [loading, setLoading] = useState(false);
-  const [debug, setDebug] = useState<string[]>(["v7.1 Debug 面板已啟用。"]);
+  const [debug, setDebug] = useState<string[]>(["v8.1 Debug 面板已啟用。"]);
   const addDebug = (line: string) => setDebug((p) => [`${new Date().toLocaleTimeString()}  ${line}`, ...p].slice(0, 16));
 
   const [carModel, setCarModel] = useState("2025 NISSAN X-TRAIL 1.5T");
@@ -64,14 +64,14 @@ export default function Home() {
   const [price, setPrice] = useState("75.9");
   const [extra, setExtra] = useState("參考圖風格：黑色工業 showroom、紅橘速度光、濕亮反射地板、煙霧、厚重 hammered 金屬字氛圍。背景不要出現車或人物。");
 
-  const [subjectX, setSubjectX] = useState("40");
-  const [subjectY, setSubjectY] = useState("305");
-  const [subjectW, setSubjectW] = useState("1480");
+  const [subjectX, setSubjectX] = useState("20");
+  const [subjectY, setSubjectY] = useState("285");
+  const [subjectW, setSubjectW] = useState("1540");
   const [bottomTitleSize, setBottomTitleSize] = useState("88");
-  const [priceX, setPriceX] = useState("1045");
-  const [priceY, setPriceY] = useState("285");
-  const [titleX, setTitleX] = useState("650");
-  const [titleY, setTitleY] = useState("160");
+  const [priceX, setPriceX] = useState("1060");
+  const [priceY, setPriceY] = useState("260");
+  const [titleX, setTitleX] = useState("630");
+  const [titleY, setTitleY] = useState("155");
   const [logoX, setLogoX] = useState("54");
   const [logoY, setLogoY] = useState("1088");
 
@@ -85,7 +85,7 @@ export default function Home() {
 - 煙霧與高級商業廣告氣氛
 - 畫面中央下方要留給真車主體
 - 右上留給價格牌
-禁止任何文字、假字、車、人、車牌、logo。
+禁止任何文字、假字、車、人、車牌、logo。背景必須留出中央大車位置與右側人物/價格位置，不要產生任何主體。
 ${extra}`, [extra]);
 
   const fullFallbackPrompt = useMemo(() => `【SOFU v7 備援模式】
@@ -307,6 +307,18 @@ ${extra}`, [extra]);
     ctx.fillRect(0, 520, W, 420);
     ctx.restore();
 
+
+    // v8.1 subject integration highlights
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+    const rim = ctx.createLinearGradient(0, 420, 1400, 860);
+    rim.addColorStop(0, "rgba(255,60,0,0)");
+    rim.addColorStop(.55, "rgba(255,90,20,.12)");
+    rim.addColorStop(1, "rgba(255,255,255,.18)");
+    ctx.fillStyle = rim;
+    ctx.fillRect(0, 340, W, 560);
+    ctx.restore();
+
     // headlight glow
     ctx.save();
     const glow = ctx.createRadialGradient(1120, 660, 0, 1120, 660, 280);
@@ -400,12 +412,8 @@ ${extra}`, [extra]);
     } catch (error: any) {
       const msg = String(error?.message || "");
       if (msg.includes("REMOVE_BG_API_KEY") || msg.includes("remove.bg") || msg.includes("去背")) {
-        setStatus("偵測到 remove.bg 尚未設定，改用 v7 備援模式：AI 直接生成完整商業海報...");
-        try {
-          await generateFullFallback();
-        } catch (fallbackError: any) {
-          setStatus("備援生成失敗：" + (fallbackError?.message || "未知錯誤"));
-        }
+        setStatus("v8.1 主體鎖定模式需要 REMOVE_BG_API_KEY。請先到 Vercel Environment Variables 新增 REMOVE_BG_API_KEY，否則無法保留真人真車。");
+        addDebug("v8.1 已停止 AI 備援：為了避免車型/人臉跑掉，本版要求先完成自動去背。");
       } else {
         setStatus("生成失敗：" + (error?.message || "未知錯誤"));
       }
@@ -446,14 +454,14 @@ ${extra}`, [extra]);
   return (
     <main className="page">
       <div className="wrap">
-        <div className="badge">🚗 SOFU v7.1 Debug 節點式中古車商業視覺引擎</div>
-        <h1 className="title">SOFU Layered Poster Engine v7.1</h1>
-        <p className="sub">v7 核心：AI 不再一張圖打天下。AI 只做背景，真實人車貼回，中文字、價格、Logo、車牌由程式合成。</p>
+        <div className="badge">🚗 SOFU v8.1 主體鎖定商業合成引擎</div>
+        <h1 className="title">SOFU Subject Lock Engine v8.1</h1>
+        <p className="sub">v8.1 核心：AI 只生成背景；真人真車由自動去背主體貼回；中文字、價格、Logo、車牌全部由程式合成。</p>
 
         <section className="grid">
           <div className="card">
             <h2 className="h"><Upload size={20}/> STEP 1｜上傳素材</h2>
-            <div className="notice">OPENAI_API_KEY 必要。REMOVE_BG_API_KEY 可選：有設定＝真實主體鎖定；沒設定＝AI 備援生成。</div>
+            <div className="notice">OPENAI_API_KEY 與 REMOVE_BG_API_KEY 都需要。v8.1 不再使用 AI 備援亂生圖，目標是保留真人真車。</div>
             <div className="uploadGrid">
               {items.map((item) => (
                 <div key={item.key}>
@@ -486,7 +494,7 @@ ${extra}`, [extra]);
 
             <label className="field"><span>背景補充要求</span><textarea value={extra} onChange={(e) => setExtra(e.target.value)}/></label>
 
-            <button className="btn" disabled={loading} onClick={oneClick}><Wand2 size={16}/> {loading ? "生成中..." : "一鍵生成 v7.1"}</button>
+            <button className="btn" disabled={loading} onClick={oneClick}><Wand2 size={16}/> {loading ? "生成中..." : "一鍵生成 v8.1"}</button>
             <button className="btn2" onClick={checkHealth}>檢查 API Key 狀態</button>
             <button className="btn2" onClick={recompositeOnly}><RefreshCw size={16}/> 只重新合成位置</button>
             <button className="btn2" onClick={download}><Download size={16}/> 下載 PNG</button>
@@ -507,15 +515,15 @@ ${extra}`, [extra]);
           <div className="card">
             <h2 className="h"><ShieldCheck size={20}/> v7 節點規則</h2>
             <div className="rule">✓ NODE 1：原始人車主體</div>
-            <div className="rule">✓ NODE 2：自動去背主體鎖定</div>
-            <div className="rule">✓ NODE 3：AI 只生成背景</div>
+            <div className="rule">✓ NODE 2：自動去背主體鎖定（必須）</div>
+            <div className="rule">✓ NODE 3：AI 只生成純背景</div>
             <div className="rule">✓ NODE 4：Canvas 真字與價格牌</div>
-            <div className="rule">✓ NODE 5：陰影、反射、速度線後製</div>
+            <div className="rule">✓ NODE 5：陰影、反射、速度線、融合光後製</div>
             <h2 className="h" style={{marginTop:18}}>Debug 面板</h2>
             <div className="status" style={{fontSize:12, maxHeight:260, overflow:"auto"}}>
               {debug.map((line, i) => <div key={i}>{line}</div>)}
             </div>
-            <p className="small">有 remove.bg key 時才會真正保留真人車。沒有 key 時會進 AI 備援模式，方便先測試流程。</p>
+            <p className="small">v8.1 必須使用自動去背，才能真正保留原車與真人。這版不再走 AI 完整海報備援，避免車型與人臉跑掉。</p>
           </div>
         </section>
       </div>
