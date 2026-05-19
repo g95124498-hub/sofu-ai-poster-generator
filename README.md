@@ -1,1 +1,3 @@
-# SOFU AI Poster Generator v2\n\n新增多參考圖上傳：原照、人臉、風格、價格、Logo、車牌。\n
+# SOFU AI Poster Generator v2.1
+
+修正：圖片送出前自動壓縮，避免 Request Entity Too Large / JSON parse error。

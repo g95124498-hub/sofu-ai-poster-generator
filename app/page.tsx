@@ -21,6 +21,31 @@ const sizes = [
   { id: "story", label: "直式 9:16", apiSize: "1024x1536" }
 ];
 
+async function compressImage(file: File, maxSize = 900, quality = 0.68): Promise<File> {
+  if (!file.type.startsWith("image/")) return file;
+  const img = document.createElement("img");
+  const objectUrl = URL.createObjectURL(file);
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error("圖片讀取失敗"));
+    img.src = objectUrl;
+  });
+  const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+  const w = Math.max(1, Math.round(img.width * scale));
+  const h = Math.max(1, Math.round(img.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas 不支援");
+  ctx.drawImage(img, 0, 0, w, h);
+  URL.revokeObjectURL(objectUrl);
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((b) => b ? resolve(b) : reject(new Error("圖片壓縮失敗")), "image/jpeg", quality);
+  });
+  return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
+}
+
 export default function Home() {
   const [files, setFiles] = useState<Partial<Record<UploadKey, File>>>({});
   const [urls, setUrls] = useState<Partial<Record<UploadKey, string>>>({});
@@ -39,7 +64,7 @@ export default function Home() {
   const selectedSize = sizes.find((x) => x.id === sizeId) || sizes[0];
 
   const prompt = useMemo(() => {
-    return `【SOFU v2 保真商業合成系統】
+    return `【SOFU v2.1 保真商業合成系統】
 
 最重要：
 上傳的「原始人車照」是唯一主體來源。
@@ -93,23 +118,35 @@ export default function Home() {
     }
     setIsGenerating(true);
     setResultUrl("");
-    setStatus("生成中：AI 會讀取原照 + 參考圖，請稍候...");
+    setStatus("圖片壓縮中，避免 Request Entity Too Large...");
 
     try {
       const formData = new FormData();
-      Object.entries(files).forEach(([key, file]) => {
-        if (file) formData.append(key, file);
-      });
+      const entries = Object.entries(files) as [UploadKey, File][];
+      let totalKb = 0;
+      for (const [key, file] of entries) {
+        const compressed = await compressImage(file, key === "source" ? 1100 : 800, key === "source" ? 0.72 : 0.64);
+        totalKb += Math.round(compressed.size / 1024);
+        formData.append(key, compressed);
+      }
       formData.append("prompt", prompt);
       formData.append("size", selectedSize.apiSize);
 
+      setStatus(`生成中：已壓縮 ${entries.length} 張圖，總大小約 ${totalKb} KB。請稍候...`);
+
       const res = await fetch("/api/generate-poster", { method: "POST", body: formData });
-      const data = await res.json();
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(text.slice(0, 160) || "伺服器沒有回傳 JSON，可能圖片仍太大");
+      }
       if (!res.ok || !data.imageUrl) throw new Error(data.error || "生成失敗");
       setResultUrl(data.imageUrl);
       setStatus("生成完成，可以下載海報");
     } catch (err) {
-      setStatus("生成失敗：" + (err instanceof Error ? err.message : "未知錯誤"));
+      setStatus("生成失敗：" + (err instanceof Error ? err.message : "未知錯誤") + "\\n建議：先只上傳「原始人車照 + 風格參考圖1 + Logo」三張測試。");
     } finally {
       setIsGenerating(false);
     }
@@ -119,20 +156,21 @@ export default function Home() {
     if (!resultUrl) return setStatus("尚未生成圖片");
     const a = document.createElement("a");
     a.href = resultUrl;
-    a.download = `${carModel.replaceAll(" ", "_")}_SOFU_v2.png`;
+    a.download = `${carModel.replaceAll(" ", "_")}_SOFU_v21.png`;
     a.click();
   }
 
   return (
     <main className="page">
       <div className="wrap">
-        <div className="badge">🚗 SOFU 中古車 AI 商業合成系統 v2</div>
+        <div className="badge">🚗 SOFU 中古車 AI 商業合成系統 v2.1</div>
         <h1 className="title">SOFU AI Poster Generator</h1>
-        <p className="sub">新增多參考圖：原始人車照、人臉參考、風格參考、價格圖、Logo、車牌圖。目標是更接近你指定的中古車商業海報流程。</p>
+        <p className="sub">v2.1 修正：上傳前自動壓縮圖片，避免 Request Entity Too Large / JSON 解析錯誤。</p>
 
         <section className="grid">
           <div className="card">
             <h2 className="h"><Upload size={20}/> STEP 1｜上傳素材</h2>
+            <div className="notice">建議先測試 3 張：原始人車照 + 風格參考圖 1 + Logo。成功後再慢慢增加其他參考圖。</div>
             <div className="uploadGrid">
               {uploadItems.map((item) => (
                 <div key={item.key}>
@@ -169,7 +207,7 @@ export default function Home() {
             <div className="status"><b>任務狀態</b><br/>{status}</div>
             <button className="btn" onClick={generate} disabled={isGenerating}>{isGenerating ? "生成中..." : "生成海報"}</button>
             <button className="btn2" onClick={download}><Download size={16}/> 下載海報</button>
-            <p className="small">提醒：v2 已加入參考圖欄位；若要達到範例那種「100%不改人車」，下一階段要升級成「去背主體＋背景生成＋程式疊字」合成流程。</p>
+            <p className="small">v2.1 是「多參考圖 AI 版」。若要完全不改車與人，下一階段要做「去背主體＋AI背景＋程式疊字」合成版。</p>
           </div>
 
           <div className="card">

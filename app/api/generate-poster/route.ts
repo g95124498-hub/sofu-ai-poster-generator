@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -26,6 +27,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "請至少上傳原始人車照" }, { status: 400 });
     }
 
+    const totalBytes = images.reduce((sum, img) => sum + img.size, 0);
+    if (totalBytes > 4_000_000) {
+      return NextResponse.json({ error: "圖片總大小仍太大，請先只上傳 2~3 張參考圖測試" }, { status: 413 });
+    }
+
     const result = await openai.images.edit({
       model: "gpt-image-1",
       image: images,
@@ -39,10 +45,11 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ imageUrl: `data:image/png;base64,${base64}` });
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
+    const message = error?.message || "未知錯誤";
     return NextResponse.json(
-      { error: "生成失敗：請檢查圖片格式、OpenAI 額度、或圖片是否過大" },
+      { error: "生成失敗：" + message },
       { status: 500 }
     );
   }
