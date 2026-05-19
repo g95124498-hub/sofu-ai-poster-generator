@@ -2,8 +2,8 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "SOFU v6 一鍵中古車海報生產線",
-  description: "自動去背 + AI 背景 + Canvas 商業合成"
+  title: "SOFU v7 節點式商業海報引擎",
+  description: "真實主體鎖定 + AI 背景 + Canvas 商業合成"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

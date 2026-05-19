@@ -18,11 +18,13 @@ export async function POST(req: Request) {
     const source = formData.get("source");
     const style = formData.get("style");
     const logo = formData.get("logo");
+    const face = formData.get("face");
     const prompt = String(formData.get("prompt") || "");
 
     const images: File[] = [];
     if (source instanceof File) images.push(source);
     if (style instanceof File) images.push(style);
+    if (face instanceof File) images.push(face);
     if (logo instanceof File) images.push(logo);
 
     if (images.length < 2) {

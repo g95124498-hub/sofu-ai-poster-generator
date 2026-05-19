@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Upload, Wand2, Download, Layers, ShieldCheck } from "lucide-react";
+import { Upload, Wand2, Download, Layers, ShieldCheck, RefreshCw } from "lucide-react";
 
-type Key = "source" | "style" | "logo" | "plate";
+type Key = "source" | "style" | "logo" | "plate" | "face";
 const items: { key: Key; label: string; required?: boolean }[] = [
   { key: "source", label: "原始人車照", required: true },
   { key: "style", label: "參考海報", required: true },
+  { key: "face", label: "人臉參考圖" },
   { key: "logo", label: "SOFU Logo PNG" },
   { key: "plate", label: "車牌 PNG" }
 ];
@@ -51,7 +52,7 @@ export default function Home() {
   const [urls, setUrls] = useState<Partial<Record<Key, string>>>({});
   const [cutoutUrl, setCutoutUrl] = useState("");
   const [backgroundUrl, setBackgroundUrl] = useState("");
-  const [status, setStatus] = useState("請上傳原始人車照與參考海報，然後按「一鍵生成」。");
+  const [status, setStatus] = useState("v7 節點式合成：上傳原始人車照 + 參考海報，按一鍵生成。");
   const [loading, setLoading] = useState(false);
 
   const [carModel, setCarModel] = useState("2025 NISSAN X-TRAIL 1.5T");
@@ -59,48 +60,43 @@ export default function Home() {
   const [jpText, setJpText] = useState("新入荷しました");
   const [feature, setFeature] = useState("超值 / 輕油電 / 現省大價差");
   const [price, setPrice] = useState("75.9");
-  const [extra, setExtra] = useState("參考圖風格：黑色工業 showroom、紅橘速度光、濕亮反射地板、煙霧、厚重金屬字氛圍。背景不要出現車或人物。");
-  const [subjectX, setSubjectX] = useState("55");
-  const [subjectY, setSubjectY] = useState("300");
-  const [subjectW, setSubjectW] = useState("1420");
+  const [extra, setExtra] = useState("參考圖風格：黑色工業 showroom、紅橘速度光、濕亮反射地板、煙霧、厚重 hammered 金屬字氛圍。背景不要出現車或人物。");
+
+  const [subjectX, setSubjectX] = useState("40");
+  const [subjectY, setSubjectY] = useState("305");
+  const [subjectW, setSubjectW] = useState("1480");
   const [bottomTitleSize, setBottomTitleSize] = useState("88");
+  const [priceX, setPriceX] = useState("1045");
+  const [priceY, setPriceY] = useState("285");
+  const [titleX, setTitleX] = useState("650");
+  const [titleY, setTitleY] = useState("160");
+  const [logoX, setLogoX] = useState("54");
+  const [logoY, setLogoY] = useState("1088");
 
-  const fullPrompt = useMemo(() => `【SOFU v6.2 備援 AI 商業生成模式】
-
-當自動去背 API 未設定時，請直接根據「原始人車照」與「參考海報」生成一張 4:3 橫式中古車商業海報。
-
-重要：
-- 參考海報只學排版、燈光、黑色工業 showroom、紅橘速度線、金屬字、底部紅黑車名條。
-- 不要學參考海報的車型。
-- 原始人車照是主體來源，車型、車色、人物姿勢盡量接近原圖。
-- 不要出現多餘 icon、功能清單、側欄、小框、無關文案。
-- 繁體中文與日文要清楚，不要亂碼。
-- 人物不可缺腳、不可半身、不可被車吃掉。
-- 車頭要有壓迫感，接近參考圖風格。
-
-固定文字：
-左上日文：${jpText}
-巨大金屬字：${headline}
-白色資訊條：${feature}
-價格牌：真的就賣！ ${price}萬
-底部車款：${carModel}
-
-補充：
-${extra}
-`, [carModel, headline, jpText, feature, price, extra]);
-
-  const bgPrompt = useMemo(() => `只根據參考海報生成「背景與氣氛」，不要生成任何車、人物、價格、Logo、中文字。
-請輸出 4:3 橫式背景：
-- 黑色高級工業 showroom
-- 紅橘速度光從左向右爆發
+  const bgPrompt = useMemo(() => `只生成背景，不要生成車、人、Logo、價格牌、中文字。
+請參考上傳的參考海報，生成 4:3 橫式黑色工業 showroom 背景：
+- 黑色金屬牆
+- 左側斜切機械結構
+- 紅橘速度光線
 - 濕亮反射地板
 - 車展舞台光
-- cinematic smoke
-- 左側斜切黑色金屬牆
-- 高級台灣中古車廣告氛圍
-禁止出現：車輛、人物、假中文字、價格、Logo。
-背景要像參考海報，但保持乾淨，讓程式後製疊上真車、真人、真中文字。
+- 煙霧與高級商業廣告氣氛
+- 畫面中央下方要留給真車主體
+- 右上留給價格牌
+禁止任何文字、假字、車、人、車牌、logo。
 ${extra}`, [extra]);
+
+  const fullFallbackPrompt = useMemo(() => `【SOFU v7 備援模式】
+如果沒有 REMOVE_BG_API_KEY，請直接生成完整 4:3 中古車商業海報。
+原始人車照是主體來源，參考海報只學版型與風格，不學車型。
+請避免多餘側欄、icon 清單、小框、無關文案。
+文字：
+左上：${jpText}
+主標：${headline}
+資訊條：${feature}
+價格牌：真的就賣！ ${price}萬
+底部：${carModel}
+人物不可缺腳，車型盡量接近原圖。`, [jpText, headline, feature, price, carModel]);
 
   function pick(key: Key, file?: File) {
     if (!file) return;
@@ -113,23 +109,83 @@ ${extra}`, [extra]);
     ctx.save();
     ctx.font = `900 ${size}px Microsoft JhengHei, Arial`;
     ctx.lineJoin = "round";
-    ctx.lineWidth = 18;
-    ctx.strokeStyle = "rgba(0,0,0,.95)";
-    ctx.strokeText(text, x + 8, y + 12);
+    ctx.lineWidth = 20;
+    ctx.strokeStyle = "rgba(0,0,0,.98)";
+    ctx.strokeText(text, x + 9, y + 13);
 
     const g = ctx.createLinearGradient(0, y - size, 0, y + 25);
     g.addColorStop(0, "#ffffff");
-    g.addColorStop(.18, "#bfbfbf");
-    g.addColorStop(.36, "#6f6f6f");
-    g.addColorStop(.52, "#f5f5f5");
-    g.addColorStop(.72, "#8b8b8b");
+    g.addColorStop(.16, "#cfcfcf");
+    g.addColorStop(.34, "#656565");
+    g.addColorStop(.52, "#f7f7f7");
+    g.addColorStop(.72, "#888888");
     g.addColorStop(1, "#eeeeee");
-
     ctx.fillStyle = g;
     ctx.fillText(text, x, y);
+
+    // hammered texture scratches
+    ctx.globalCompositeOperation = "multiply";
+    ctx.strokeStyle = "rgba(30,30,30,.28)";
+    ctx.lineWidth = 1.2;
+    for (let i = 0; i < 55; i++) {
+      const sx = x + Math.random() * 520;
+      const sy = y - size + Math.random() * size;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx + 28 * Math.random(), sy + 12 * Math.random());
+      ctx.stroke();
+    }
+    ctx.globalCompositeOperation = "source-over";
+
     ctx.lineWidth = 3;
     ctx.strokeStyle = "rgba(255,255,255,.75)";
     ctx.strokeText(text, x, y);
+    ctx.restore();
+  }
+
+  function drawSpeedLines(ctx: CanvasRenderingContext2D, W: number, H: number) {
+    ctx.save();
+    for (let i = 0; i < 26; i++) {
+      const y = 170 + i * 22;
+      const grad = ctx.createLinearGradient(0, y, W, y - 170);
+      grad.addColorStop(0, "rgba(255,0,0,0)");
+      grad.addColorStop(.2, i % 4 === 0 ? "rgba(255,0,0,.88)" : "rgba(255,80,0,.35)");
+      grad.addColorStop(.75, i % 4 === 0 ? "rgba(255,150,20,.75)" : "rgba(255,60,0,.25)");
+      grad.addColorStop(1, "rgba(255,0,0,0)");
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = i % 4 === 0 ? 6 : 3;
+      ctx.beginPath();
+      ctx.moveTo(-160, y + 60);
+      ctx.lineTo(W + 200, y - 120);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawPriceTag(ctx: CanvasRenderingContext2D) {
+    const x = Number(priceX) || 1045;
+    const y = Number(priceY) || 285;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(-0.045);
+    ctx.shadowColor = "rgba(0,0,0,.55)";
+    ctx.shadowBlur = 14;
+    ctx.shadowOffsetX = 8;
+    ctx.shadowOffsetY = 8;
+    ctx.fillStyle = "#d2a45c";
+    ctx.fillRect(0, 0, 372, 216);
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "#231100";
+    ctx.lineWidth = 7;
+    ctx.strokeRect(0, 0, 372, 216);
+    ctx.font = "900 48px Microsoft JhengHei";
+    ctx.fillStyle = "#111";
+    ctx.fillText("真的就賣！", 36, 62);
+    ctx.font = "900 106px Arial Black";
+    ctx.fillStyle = "#e60012";
+    ctx.fillText(price, 34, 165);
+    ctx.font = "900 42px Microsoft JhengHei";
+    ctx.fillText("萬", 282, 158);
     ctx.restore();
   }
 
@@ -156,6 +212,31 @@ ${extra}`, [extra]);
     return data.imageUrl as string;
   }
 
+  async function generateFullFallback() {
+    if (!files.source || !files.style) throw new Error("請先上傳原始人車照與參考海報");
+    const formData = new FormData();
+    formData.append("source", await compressImage(files.source, 1300, 0.74));
+    formData.append("style", await compressImage(files.style, 1200, 0.72));
+    if (files.logo) formData.append("logo", await compressImage(files.logo, 800, 0.75));
+    if (files.face) formData.append("face", await compressImage(files.face, 700, 0.75));
+    formData.append("prompt", fullFallbackPrompt);
+
+    const res = await fetch("/api/generate-full", { method: "POST", body: formData });
+    const data = await res.json();
+    if (!res.ok || !data.imageUrl) throw new Error(data.error || "AI 備援生成失敗");
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const W = 1600, H = 1200;
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d")!;
+    const img = await loadImage(data.imageUrl);
+    ctx.drawImage(img, 0, 0, W, H);
+    setBackgroundUrl(data.imageUrl);
+    setStatus("完成：v7 備援模式已生成。若要車型/人臉更穩，請設定 REMOVE_BG_API_KEY 後使用主體鎖定合成。");
+  }
+
   async function compose(bgUrl: string, subjectUrl: string) {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -163,84 +244,67 @@ ${extra}`, [extra]);
     const W = 1600, H = 1200;
     canvas.width = W;
     canvas.height = H;
-
     const ctx = canvas.getContext("2d")!;
+
     const bg = await loadImage(bgUrl);
     ctx.drawImage(bg, 0, 0, W, H);
 
-    // dark top gradient for title readability
-    const topShade = ctx.createLinearGradient(0, 0, 0, 360);
-    topShade.addColorStop(0, "rgba(0,0,0,.65)");
+    // vignette and top dark shield
+    const topShade = ctx.createLinearGradient(0, 0, 0, 370);
+    topShade.addColorStop(0, "rgba(0,0,0,.72)");
     topShade.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = topShade;
-    ctx.fillRect(0, 0, W, 360);
+    ctx.fillRect(0, 0, W, 370);
 
-    // Main subject
+    drawSpeedLines(ctx, W, H);
+
     const subject = await loadImage(subjectUrl);
-    const targetW = Number(subjectW) || 1420;
+    const targetW = Number(subjectW) || 1480;
     const ratio = subject.height / subject.width;
     const targetH = targetW * ratio;
-    const x = Number(subjectX) || 55;
-    const y = Number(subjectY) || 300;
+    const x = Number(subjectX) || 40;
+    const y = Number(subjectY) || 305;
 
-    // shadow
+    // contact shadow
     ctx.save();
-    ctx.globalAlpha = .55;
-    ctx.filter = "blur(18px)";
-    ctx.fillStyle = "rgba(0,0,0,.85)";
+    ctx.globalAlpha = .62;
+    ctx.filter = "blur(22px)";
+    ctx.fillStyle = "rgba(0,0,0,.92)";
     ctx.beginPath();
-    ctx.ellipse(760, 900, 610, 80, 0, 0, Math.PI * 2);
+    ctx.ellipse(790, 910, 660, 92, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // reflection
+    // floor reflection
     ctx.save();
-    ctx.translate(0, 1030);
-    ctx.scale(1, -0.22);
-    ctx.globalAlpha = .18;
-    ctx.filter = "blur(2px)";
+    ctx.translate(0, 1035);
+    ctx.scale(1, -0.24);
+    ctx.globalAlpha = .20;
+    ctx.filter = "blur(3px)";
     ctx.drawImage(subject, x, y, targetW, targetH);
     ctx.restore();
 
+    // true subject
     ctx.drawImage(subject, x, y, targetW, targetH);
 
-    // headlight glow vibe
+    // foreground smoke
     ctx.save();
-    const glow = ctx.createRadialGradient(1160, 660, 0, 1160, 660, 260);
-    glow.addColorStop(0, "rgba(255,255,255,.45)");
-    glow.addColorStop(.35, "rgba(255,90,20,.20)");
-    glow.addColorStop(1, "rgba(255,0,0,0)");
-    ctx.fillStyle = glow;
-    ctx.fillRect(850, 440, 620, 400);
-    ctx.restore();
-
-
-    // v6.1 programmed commercial speed lines overlay
-    ctx.save();
-    for (let i = 0; i < 15; i++) {
-      ctx.translate(0, 0);
-      ctx.beginPath();
-      ctx.moveTo(-120, 250 + i * 22);
-      ctx.lineTo(1600, 40 + i * 20);
-      ctx.strokeStyle = i % 3 === 0 ? "rgba(255,40,0,.55)" : "rgba(255,115,20,.32)";
-      ctx.lineWidth = i % 3 === 0 ? 6 : 3;
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    // v6.1 low smoke and vignette
-    ctx.save();
-    const smoke = ctx.createRadialGradient(250, 780, 0, 250, 780, 520);
-    smoke.addColorStop(0, "rgba(255,255,255,.16)");
-    smoke.addColorStop(.45, "rgba(150,150,150,.08)");
+    const smoke = ctx.createRadialGradient(230, 790, 0, 230, 790, 520);
+    smoke.addColorStop(0, "rgba(255,255,255,.18)");
+    smoke.addColorStop(.46, "rgba(180,180,180,.08)");
     smoke.addColorStop(1, "rgba(255,255,255,0)");
     ctx.fillStyle = smoke;
     ctx.fillRect(0, 520, W, 420);
-    const vignette = ctx.createRadialGradient(W/2, H/2, 250, W/2, H/2, 900);
-    vignette.addColorStop(0, "rgba(0,0,0,0)");
-    vignette.addColorStop(1, "rgba(0,0,0,.48)");
-    ctx.fillStyle = vignette;
-    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+
+    // headlight glow
+    ctx.save();
+    const glow = ctx.createRadialGradient(1120, 660, 0, 1120, 660, 280);
+    glow.addColorStop(0, "rgba(255,255,255,.45)");
+    glow.addColorStop(.36, "rgba(255,100,20,.18)");
+    glow.addColorStop(1, "rgba(255,0,0,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(820, 430, 640, 420);
     ctx.restore();
 
     // Japanese red text
@@ -252,7 +316,7 @@ ${extra}`, [extra]);
     ctx.fillText(jpText, 58, 118);
     ctx.restore();
 
-    // slanted white info bar
+    // white info bar
     ctx.save();
     ctx.translate(58, 158);
     ctx.beginPath();
@@ -268,27 +332,8 @@ ${extra}`, [extra]);
     ctx.fillText(feature, 28, 53);
     ctx.restore();
 
-    // title metal
-    drawMetalText(ctx, headline, 640, 158, 175);
-
-    // price tag
-    ctx.save();
-    ctx.translate(1045, 295);
-    ctx.rotate(-0.045);
-    ctx.fillStyle = "#d2a45c";
-    ctx.fillRect(0, 0, 372, 216);
-    ctx.strokeStyle = "#231100";
-    ctx.lineWidth = 7;
-    ctx.strokeRect(0, 0, 372, 216);
-    ctx.font = "900 48px Microsoft JhengHei";
-    ctx.fillStyle = "#111";
-    ctx.fillText("真的就賣！", 36, 62);
-    ctx.font = "900 106px Arial Black";
-    ctx.fillStyle = "#e60012";
-    ctx.fillText(price, 34, 165);
-    ctx.font = "900 42px Microsoft JhengHei";
-    ctx.fillText("萬", 282, 158);
-    ctx.restore();
+    drawMetalText(ctx, headline, Number(titleX) || 650, Number(titleY) || 160, 175);
+    drawPriceTag(ctx);
 
     // bottom bar
     const bar = ctx.createLinearGradient(0, 925, W, 925);
@@ -311,10 +356,9 @@ ${extra}`, [extra]);
     ctx.fillText(carModel, 64, 1036);
     ctx.restore();
 
-    // logo
     if (urls.logo) {
       const logo = await loadImage(urls.logo);
-      ctx.drawImage(logo, 54, 1088, 310, 78);
+      ctx.drawImage(logo, Number(logoX) || 54, Number(logoY) || 1088, 310, 78);
     } else {
       ctx.font = "900 58px Arial Black";
       ctx.fillStyle = "#fff";
@@ -323,57 +367,30 @@ ${extra}`, [extra]);
       ctx.fillText("Used Car Dealers", 68, 1172);
     }
 
-    // plate overlay optional
     if (urls.plate) {
       const plate = await loadImage(urls.plate);
       ctx.save();
-      ctx.globalAlpha = .95;
+      ctx.globalAlpha = .96;
       ctx.drawImage(plate, 660, 790, 250, 82);
       ctx.restore();
     }
 
-    setStatus("完成：v6 已自動去背、AI 生成背景、程式合成真中文字與價格。");
-  }
-
-
-  async function generateFullFallback() {
-    if (!files.source || !files.style) throw new Error("請先上傳原始人車照與參考海報");
-    const formData = new FormData();
-    formData.append("source", await compressImage(files.source, 1300, 0.74));
-    formData.append("style", await compressImage(files.style, 1200, 0.72));
-    if (files.logo) formData.append("logo", await compressImage(files.logo, 800, 0.75));
-    formData.append("prompt", fullPrompt);
-
-    const res = await fetch("/api/generate-full", { method: "POST", body: formData });
-    const data = await res.json();
-    if (!res.ok || !data.imageUrl) throw new Error(data.error || "AI 備援生成失敗");
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const W = 1600, H = 1200;
-    canvas.width = W;
-    canvas.height = H;
-    const ctx = canvas.getContext("2d")!;
-    const img = await loadImage(data.imageUrl);
-    ctx.drawImage(img, 0, 0, W, H);
-
-    setBackgroundUrl(data.imageUrl);
-    setStatus("完成：目前未使用 remove.bg，自動改用 v6.2 AI 商業生成備援模式。若要更保真人車，之後再設定 REMOVE_BG_API_KEY。");
+    setStatus("完成：v7 節點式合成。真車真人貼回、AI 背景、程式真字、價格牌與反射陰影。");
   }
 
   async function oneClick() {
     setLoading(true);
     try {
-      setStatus("步驟 1/3：嘗試自動去背中...");
+      setStatus("NODE 1/5：嘗試自動去背主體鎖定...");
       const subject = await removeBg();
-      setStatus("步驟 2/3：AI 生成 showroom 背景中...");
+      setStatus("NODE 2/5：AI 生成純背景...");
       const bg = await generateBackground();
-      setStatus("步驟 3/3：Canvas 商業合成中...");
+      setStatus("NODE 3/5：合成真實人車...");
       await compose(bg, subject);
     } catch (error: any) {
       const msg = String(error?.message || "");
       if (msg.includes("REMOVE_BG_API_KEY") || msg.includes("remove.bg") || msg.includes("去背")) {
-        setStatus("偵測到 remove.bg 尚未設定，改用 v6.2 備援模式：AI 直接生成完整商業海報...");
+        setStatus("偵測到 remove.bg 尚未設定，改用 v7 備援模式：AI 直接生成完整商業海報...");
         try {
           await generateFullFallback();
         } catch (fallbackError: any) {
@@ -387,39 +404,41 @@ ${extra}`, [extra]);
     }
   }
 
+  async function recompositeOnly() {
+    if (!backgroundUrl || !cutoutUrl) {
+      setStatus("需要先產生 AI 背景與去背結果，才能只重新合成。");
+      return;
+    }
+    await compose(backgroundUrl, cutoutUrl);
+  }
+
   function download() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const a = document.createElement("a");
     a.href = canvas.toDataURL("image/png");
-    a.download = `${carModel.replaceAll(" ", "_")}_SOFU_v6.png`;
+    a.download = `${carModel.replaceAll(" ", "_")}_SOFU_v7.png`;
     a.click();
   }
 
   return (
     <main className="page">
       <div className="wrap">
-        <div className="badge">🚗 SOFU v6.2 免去背 Key 備援商業海報生產線</div>
-        <h1 className="title">SOFU AI Production Line v6.2</h1>
-        <p className="sub">v6.2 流程：有 remove.bg key 走自動去背合成；沒有 key 會自動改走 AI 商業生成備援 → AI 只做 showroom 背景 → 原本人車貼回 → 程式產生繁體中文、價格牌、Logo、車牌。</p>
+        <div className="badge">🚗 SOFU v7 節點式中古車商業視覺引擎</div>
+        <h1 className="title">SOFU Layered Poster Engine v7</h1>
+        <p className="sub">v7 核心：AI 不再一張圖打天下。AI 只做背景，真實人車貼回，中文字、價格、Logo、車牌由程式合成。</p>
 
         <section className="grid">
           <div className="card">
             <h2 className="h"><Upload size={20}/> STEP 1｜上傳素材</h2>
-            <div className="notice">至少必須設定 OPENAI_API_KEY。REMOVE_BG_API_KEY 可選：有設定會自動去背合成；沒設定會自動改用 AI 商業生成備援。</div>
+            <div className="notice">OPENAI_API_KEY 必要。REMOVE_BG_API_KEY 可選：有設定＝真實主體鎖定；沒設定＝AI 備援生成。</div>
             <div className="uploadGrid">
               {items.map((item) => (
                 <div key={item.key}>
                   <button className="upload" onClick={() => refs.current[item.key]?.click()}>
                     {urls[item.key] ? <img src={urls[item.key]} alt={item.label}/> : <span>{item.label}{item.required ? " *" : ""}</span>}
                   </button>
-                  <input
-                    hidden
-                    ref={(el) => { refs.current[item.key] = el; }}
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => pick(item.key, e.target.files?.[0])}
-                  />
+                  <input hidden ref={(el) => { refs.current[item.key] = el; }} type="file" accept="image/*" onChange={(e) => pick(item.key, e.target.files?.[0])}/>
                 </div>
               ))}
             </div>
@@ -431,15 +450,22 @@ ${extra}`, [extra]);
             <Field label="白色資訊條" value={feature} setValue={setFeature}/>
             <Field label="價格數字" value={price} setValue={setPrice}/>
 
-            <h2 className="h" style={{marginTop:18}}>STEP 2.5｜主體位置微調</h2>
-            <Field label="人車 X 位置" value={subjectX} setValue={setSubjectX}/>
-            <Field label="人車 Y 位置" value={subjectY} setValue={setSubjectY}/>
+            <h2 className="h" style={{marginTop:18}}>STEP 2.5｜版型微調</h2>
+            <Field label="人車 X" value={subjectX} setValue={setSubjectX}/>
+            <Field label="人車 Y" value={subjectY} setValue={setSubjectY}/>
             <Field label="人車寬度" value={subjectW} setValue={setSubjectW}/>
             <Field label="底部車名字級" value={bottomTitleSize} setValue={setBottomTitleSize}/>
+            <Field label="價格牌 X" value={priceX} setValue={setPriceX}/>
+            <Field label="價格牌 Y" value={priceY} setValue={setPriceY}/>
+            <Field label="金屬字 X" value={titleX} setValue={setTitleX}/>
+            <Field label="金屬字 Y" value={titleY} setValue={setTitleY}/>
+            <Field label="Logo X" value={logoX} setValue={setLogoX}/>
+            <Field label="Logo Y" value={logoY} setValue={setLogoY}/>
 
             <label className="field"><span>背景補充要求</span><textarea value={extra} onChange={(e) => setExtra(e.target.value)}/></label>
 
-            <button className="btn" disabled={loading} onClick={oneClick}><Wand2 size={16}/> {loading ? "生成中..." : "一鍵生成 v6.2"}</button>
+            <button className="btn" disabled={loading} onClick={oneClick}><Wand2 size={16}/> {loading ? "生成中..." : "一鍵生成 v7"}</button>
+            <button className="btn2" onClick={recompositeOnly}><RefreshCw size={16}/> 只重新合成位置</button>
             <button className="btn2" onClick={download}><Download size={16}/> 下載 PNG</button>
           </div>
 
@@ -450,19 +476,19 @@ ${extra}`, [extra]);
             </div>
             <div className="status">{status}</div>
             <div className="preview" style={{marginTop:12}}>
-              <Box title="去背結果" url={cutoutUrl}/>
-              <Box title="AI 背景" url={backgroundUrl}/>
+              <Box title="去背主體" url={cutoutUrl}/>
+              <Box title="AI 純背景 / 備援圖" url={backgroundUrl}/>
             </div>
           </div>
 
           <div className="card">
-            <h2 className="h"><ShieldCheck size={20}/> v6 核心規則</h2>
-            <div className="rule">✓ 沒有 REMOVE_BG_API_KEY 也可以先生成</div>
-            <div className="rule">✓ AI 不再生成中文字與價格</div>
-            <div className="rule">✓ 有 remove.bg key 時，車與人物由去背主體貼回</div>
-            <div className="rule">✓ 背景才交給 AI 生成</div>
-            <div className="rule">✓ 4:3 固定輸出</div>
-            <p className="small">v6.2 新增免 remove.bg key 備援：沒有去背 key 也能先用 AI 商業生成模式測試。</p>
+            <h2 className="h"><ShieldCheck size={20}/> v7 節點規則</h2>
+            <div className="rule">✓ NODE 1：原始人車主體</div>
+            <div className="rule">✓ NODE 2：自動去背主體鎖定</div>
+            <div className="rule">✓ NODE 3：AI 只生成背景</div>
+            <div className="rule">✓ NODE 4：Canvas 真字與價格牌</div>
+            <div className="rule">✓ NODE 5：陰影、反射、速度線後製</div>
+            <p className="small">有 remove.bg key 時才會真正保留真人車。沒有 key 時會進 AI 備援模式，方便先測試流程。</p>
           </div>
         </section>
       </div>

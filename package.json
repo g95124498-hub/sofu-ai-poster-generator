@@ -1,6 +1,6 @@
 {
-  "name": "sofu-ai-poster-generator-v62-no-removebg-fallback",
-  "version": "6.2.0",
+  "name": "sofu-ai-poster-generator-v70-layered-engine",
+  "version": "7.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",

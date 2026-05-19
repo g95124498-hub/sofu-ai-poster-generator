@@ -1,13 +1,17 @@
-# SOFU AI Poster Generator v6.2
+# SOFU AI Poster Generator v7.0
 
-新增：
-- 免 REMOVE_BG_API_KEY 備援模式
-- 有 remove.bg key：自動去背 + AI 背景 + Canvas 合成
-- 沒 remove.bg key：自動改用 AI 商業生成完整海報
-- 保留 v6.1 的人車位置微調欄位
+v7 節點式中古車商業視覺引擎。
 
-必要環境變數：
+核心：
+- AI 不再負責整張圖
+- 有 REMOVE_BG_API_KEY 時：原始人車自動去背，真實主體貼回
+- AI 只生成背景
+- Canvas 產生真中文字、價格牌、Logo、車牌
+- 程式後製速度線、煙霧、陰影、反射
+- 可微調人車 / 價格牌 / 金屬字 / Logo 位置
+
+必要：
 OPENAI_API_KEY
 
-選用環境變數：
+選用但建議：
 REMOVE_BG_API_KEY
