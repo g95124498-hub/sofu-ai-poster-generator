@@ -1,6 +1,6 @@
 {
-  "name": "sofu-ai-poster-generator-v22",
-  "version": "2.2.0",
+  "name": "sofu-ai-poster-generator-v30-fixed-template",
+  "version": "3.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,7 +11,6 @@
     "next": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "openai": "latest",
     "lucide-react": "latest"
   },
   "devDependencies": {
