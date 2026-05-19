@@ -1,7 +1,7 @@
-# SOFU AI Poster Generator v3.0.1
+# SOFU AI Poster Generator v3.0.2
 
-修正 Vercel Build：
-- 覆蓋舊 app/api/generate-poster/route.ts
-- 移除 OpenAI 依賴
-- v3 固定版型不使用 AI 重畫人車
-- 需要上傳去背人車 PNG
+修正：
+- 取消價格牌 PNG 上傳
+- 價格直接輸入數字
+- 價格牌由 Canvas 自動產生
+- 保留去背人車 PNG、參考海報、Logo PNG

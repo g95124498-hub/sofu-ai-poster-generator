@@ -1,6 +1,6 @@
 {
-  "name": "sofu-ai-poster-generator-v301-fixed-template",
-  "version": "3.0.1",
+  "name": "sofu-ai-poster-generator-v302-fixed-template",
+  "version": "3.0.2",
   "private": true,
   "scripts": {
     "dev": "next dev",

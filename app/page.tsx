@@ -3,13 +3,12 @@
 import { useRef, useState } from "react";
 import { Download, ImagePlus, Layers, RefreshCw } from "lucide-react";
 
-type Key = "subject" | "style" | "logo" | "price";
+type Key = "subject" | "style" | "logo";
 
 const items: { key: Key; label: string }[] = [
   { key: "subject", label: "去背人車 PNG（必須）" },
   { key: "style", label: "參考海報（只看風格）" },
-  { key: "logo", label: "SOFU Logo PNG" },
-  { key: "price", label: "價格牌 PNG" }
+  { key: "logo", label: "SOFU Logo PNG" }
 ];
 
 function loadImg(url: string): Promise<HTMLImageElement> {
@@ -30,7 +29,7 @@ export default function Home() {
   const [title, setTitle] = useState("新貨到");
   const [feature, setFeature] = useState("超值 / 輕油電 / 現省大價差");
   const [priceText, setPriceText] = useState("75.9");
-  const [status, setStatus] = useState("請先上傳「去背人車 PNG」，再按生成。");
+  const [status, setStatus] = useState("請先上傳「去背人車 PNG」，輸入價格數字，再按生成。");
 
   function pick(key: Key, file?: File) {
     if (!file) return;
@@ -156,29 +155,24 @@ export default function Home() {
     const subjectH = subjectW * ratio;
     ctx.drawImage(subject, 150, 360, subjectW, subjectH);
 
-    // Price tag
-    if (urls.price) {
-      const p = await loadImg(urls.price);
-      ctx.drawImage(p, 1040, 285, 360, 210);
-    } else {
-      ctx.save();
-      ctx.translate(1040, 285);
-      ctx.rotate(-0.03);
-      ctx.fillStyle = "#d6aa63";
-      ctx.fillRect(0, 0, 360, 210);
-      ctx.strokeStyle = "#271300";
-      ctx.lineWidth = 5;
-      ctx.strokeRect(0, 0, 360, 210);
-      ctx.font = "900 48px Microsoft JhengHei";
-      ctx.fillStyle = "#111";
-      ctx.fillText("真的就賣！", 34, 62);
-      ctx.font = "900 100px Arial Black";
-      ctx.fillStyle = "#e60012";
-      ctx.fillText(priceText, 34, 160);
-      ctx.font = "900 42px Microsoft JhengHei";
-      ctx.fillText("萬", 260, 155);
-      ctx.restore();
-    }
+    // Price tag - v3.0.2 uses typed number only, no PNG upload needed
+    ctx.save();
+    ctx.translate(1040, 285);
+    ctx.rotate(-0.03);
+    ctx.fillStyle = "#d6aa63";
+    ctx.fillRect(0, 0, 360, 210);
+    ctx.strokeStyle = "#271300";
+    ctx.lineWidth = 5;
+    ctx.strokeRect(0, 0, 360, 210);
+    ctx.font = "900 48px Microsoft JhengHei";
+    ctx.fillStyle = "#111";
+    ctx.fillText("真的就賣！", 34, 62);
+    ctx.font = "900 100px Arial Black";
+    ctx.fillStyle = "#e60012";
+    ctx.fillText(priceText, 34, 160);
+    ctx.font = "900 42px Microsoft JhengHei";
+    ctx.fillText("萬", 260, 155);
+    ctx.restore();
 
     // Bottom bar
     const bar = ctx.createLinearGradient(0, 940, W, 940);
@@ -229,9 +223,9 @@ export default function Home() {
   return (
     <main className="page">
       <div className="wrap">
-        <div className="badge">🚗 SOFU 中古車 AI 商業合成系統 v3.0</div>
-        <h1 className="title">SOFU Fixed Template Composer</h1>
-        <p className="sub">v3 核心：不再讓 AI 重畫人車。請上傳「已去背的人車 PNG」，系統用固定 4:3 版型合成，中文字、Logo、價格都由 Canvas 程式渲染。</p>
+        <div className="badge">🚗 SOFU 中古車 AI 商業合成系統 v3.0.2</div>
+        <h1 className="title">SOFU Fixed Template Composer v3.0.2</h1>
+        <p className="sub">v3 核心：不再讓 AI 重畫人車。請上傳「已去背的人車 PNG」，系統用固定 4:3 版型合成，中文字、Logo、價格牌都由 Canvas 程式渲染。價格不用上傳 PNG，直接輸入數字。</p>
 
         <section className="grid">
           <div className="card">
@@ -278,7 +272,7 @@ export default function Home() {
               <div className="rule">✓ 人車不經 AI 重畫</div>
               <div className="rule">✓ 4:3 固定版型</div>
               <div className="rule">✓ 繁中程式渲染</div>
-              <div className="rule">✓ Logo / 價格可疊圖</div>
+              <div className="rule">✓ Logo 可疊圖 / 價格輸入數字</div>
             </div>
           </div>
         </section>
