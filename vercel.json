@@ -1,13 +1,1 @@
-{
-  "functions": {
-    "app/api/generate-background/route.ts": {
-      "maxDuration": 300
-    },
-    "app/api/generate-full/route.ts": {
-      "maxDuration": 300
-    },
-    "app/api/remove-bg/route.ts": {
-      "maxDuration": 60
-    }
-  }
-}
+{"functions":{"app/api/generate-background/route.ts":{"maxDuration":300},"app/api/remove-bg/route.ts":{"maxDuration":60}}}
