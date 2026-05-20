@@ -1,19 +1,14 @@
-# SOFU AI Poster Generator v8.2
+# SOFU AI Poster Generator v8.3
 
-v8.2 主體鎖定＋手動去背備援版。
+v8.3 簡化流程免去背版。
 
 核心：
-- AI 不再完整生成海報
-- AI 只生成純背景
-- 真人真車用「remove.bg 自動去背」或「手動去背 PNG 備援」貼回
-- 中文字、價格牌、Logo、車牌全部由 Canvas 後製
-- 避免車型、人臉、中文字被 AI 改壞
+- 不需要 REMOVE_BG_API_KEY
+- 不需要去背人車 PNG
+- 只需要上傳原始人車照 + 參考海報
+- AI 只生成背景氛圍
+- 原始人車照直接以商業照片框保留，避免 AI 改壞車型與人臉
+- 中文字、價格牌、Logo 全部由 Canvas 後製
 
 必要：
 OPENAI_API_KEY
-
-建議：
-REMOVE_BG_API_KEY
-
-沒有 REMOVE_BG_API_KEY 時：
-上傳「去背人車 PNG 備援」即可繼續主體鎖定合成。

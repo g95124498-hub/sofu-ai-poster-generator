@@ -3,11 +3,10 @@
 import { useMemo, useRef, useState } from "react";
 import { Upload, Wand2, Download, Layers, ShieldCheck, RefreshCw } from "lucide-react";
 
-type Key = "source" | "style" | "logo" | "plate" | "face" | "cutout";
+type Key = "source" | "style" | "logo" | "plate" | "face";
 const items: { key: Key; label: string; required?: boolean }[] = [
   { key: "source", label: "原始人車照", required: true },
   { key: "style", label: "參考海報", required: true },
-  { key: "cutout", label: "去背人車 PNG 備援" },
   { key: "face", label: "人臉參考圖" },
   { key: "logo", label: "SOFU Logo PNG" },
   { key: "plate", label: "車牌 PNG" }
@@ -55,7 +54,7 @@ export default function Home() {
   const [backgroundUrl, setBackgroundUrl] = useState("");
   const [status, setStatus] = useState("v7 節點式合成：上傳原始人車照 + 參考海報，按一鍵生成。");
   const [loading, setLoading] = useState(false);
-  const [debug, setDebug] = useState<string[]>(["v8.2 Debug 面板已啟用。"]);
+  const [debug, setDebug] = useState<string[]>(["v8.3 Debug 面板已啟用。"]);
   const addDebug = (line: string) => setDebug((p) => [`${new Date().toLocaleTimeString()}  ${line}`, ...p].slice(0, 16));
 
   const [carModel, setCarModel] = useState("2025 NISSAN X-TRAIL 1.5T");
@@ -65,9 +64,9 @@ export default function Home() {
   const [price, setPrice] = useState("75.9");
   const [extra, setExtra] = useState("參考圖風格：黑色工業 showroom、紅橘速度光、濕亮反射地板、煙霧、厚重 hammered 金屬字氛圍。背景不要出現車或人物。");
 
-  const [subjectX, setSubjectX] = useState("20");
-  const [subjectY, setSubjectY] = useState("285");
-  const [subjectW, setSubjectW] = useState("1540");
+  const [subjectX, setSubjectX] = useState("95");
+  const [subjectY, setSubjectY] = useState("310");
+  const [subjectW, setSubjectW] = useState("1260");
   const [bottomTitleSize, setBottomTitleSize] = useState("88");
   const [priceX, setPriceX] = useState("1060");
   const [priceY, setPriceY] = useState("260");
@@ -193,24 +192,10 @@ ${extra}`, [extra]);
   }
 
   async function removeBg() {
-    if (urls.cutout) {
-      addDebug("使用手動去背 PNG 備援，不呼叫 remove.bg。");
-      setCutoutUrl(urls.cutout);
-      return urls.cutout;
-    }
-
-    if (!files.source) throw new Error("請先上傳原始人車照");
-    const formData = new FormData();
-    formData.append("image", await compressImage(files.source, 1500, 0.78));
-    addDebug("呼叫 /api/remove-bg...");
-    const res = await fetch("/api/remove-bg", { method: "POST", body: formData });
-    const data = await res.json();
-    addDebug(`remove-bg HTTP ${res.status}`);
-    if (!res.ok || !data.imageUrl) {
-      throw new Error((data.error || "去背失敗") + "；也可以先上傳「去背人車 PNG 備援」。");
-    }
-    setCutoutUrl(data.imageUrl);
-    return data.imageUrl as string;
+    if (!urls.source) throw new Error("請先上傳原始人車照");
+    addDebug("v8.3 簡化模式：不去背，直接保留原始照片作為真人真車主體。");
+    setCutoutUrl(urls.source);
+    return urls.source;
   }
 
   async function generateBackground() {
@@ -412,11 +397,11 @@ ${extra}`, [extra]);
   async function oneClick() {
     setLoading(true);
     try {
-      setStatus("NODE 1/5：嘗試自動去背主體鎖定...");
+      setStatus("NODE 1/5：讀取原始人車照（免去背）...");
       const subject = await removeBg();
       setStatus("NODE 2/5：AI 生成純背景...");
       const bg = await generateBackground();
-      setStatus("NODE 3/5：合成真實人車...");
+      setStatus("NODE 3/5：商業照片框合成...");
       await compose(bg, subject);
     } catch (error: any) {
       const msg = String(error?.message || "");
@@ -463,14 +448,14 @@ ${extra}`, [extra]);
   return (
     <main className="page">
       <div className="wrap">
-        <div className="badge">🚗 SOFU v8.2 主體鎖定＋手動去背備援版</div>
-        <h1 className="title">SOFU Subject Lock Engine v8.2</h1>
-        <p className="sub">v8.2 核心：AI 只生成背景；真人真車由自動去背或手動去背 PNG 貼回；中文字、價格、Logo、車牌全部由程式合成。</p>
+        <div className="badge">🚗 SOFU v8.3 簡化流程免去背版</div>
+        <h1 className="title">SOFU Simple Poster Engine v8.3</h1>
+        <p className="sub">v8.3 核心：只上傳原始人車照＋參考海報即可生成；不用 remove.bg、不用去背 PNG。原圖以商業照片框方式保留真人真車。</p>
 
         <section className="grid">
           <div className="card">
             <h2 className="h"><Upload size={20}/> STEP 1｜上傳素材</h2>
-            <div className="notice">OPENAI_API_KEY 必要。REMOVE_BG_API_KEY 建議設定；如果還沒有 key，可上傳「去背人車 PNG 備援」照樣走主體鎖定。</div>
+            <div className="notice">OPENAI_API_KEY 必要。v8.3 不需要 REMOVE_BG_API_KEY，也不需要去背 PNG。只上傳原始人車照與參考海報即可。</div>
             <div className="uploadGrid">
               {items.map((item) => (
                 <div key={item.key}>
@@ -490,9 +475,9 @@ ${extra}`, [extra]);
             <Field label="價格數字" value={price} setValue={setPrice}/>
 
             <h2 className="h" style={{marginTop:18}}>STEP 2.5｜版型微調</h2>
-            <Field label="人車 X" value={subjectX} setValue={setSubjectX}/>
-            <Field label="人車 Y" value={subjectY} setValue={setSubjectY}/>
-            <Field label="人車寬度" value={subjectW} setValue={setSubjectW}/>
+            <Field label="原圖框 X" value={subjectX} setValue={setSubjectX}/>
+            <Field label="原圖框 Y" value={subjectY} setValue={setSubjectY}/>
+            <Field label="原圖框寬度" value={subjectW} setValue={setSubjectW}/>
             <Field label="底部車名字級" value={bottomTitleSize} setValue={setBottomTitleSize}/>
             <Field label="價格牌 X" value={priceX} setValue={setPriceX}/>
             <Field label="價格牌 Y" value={priceY} setValue={setPriceY}/>
@@ -503,7 +488,7 @@ ${extra}`, [extra]);
 
             <label className="field"><span>背景補充要求</span><textarea value={extra} onChange={(e) => setExtra(e.target.value)}/></label>
 
-            <button className="btn" disabled={loading} onClick={oneClick}><Wand2 size={16}/> {loading ? "生成中..." : "一鍵生成 v8.2"}</button>
+            <button className="btn" disabled={loading} onClick={oneClick}><Wand2 size={16}/> {loading ? "生成中..." : "一鍵生成 v8.3"}</button>
             <button className="btn2" onClick={checkHealth}>檢查 API Key 狀態</button>
             <button className="btn2" onClick={recompositeOnly}><RefreshCw size={16}/> 只重新合成位置</button>
             <button className="btn2" onClick={download}><Download size={16}/> 下載 PNG</button>
@@ -524,15 +509,15 @@ ${extra}`, [extra]);
           <div className="card">
             <h2 className="h"><ShieldCheck size={20}/> v7 節點規則</h2>
             <div className="rule">✓ NODE 1：原始人車主體</div>
-            <div className="rule">✓ NODE 2：自動去背主體鎖定（必須）</div>
-            <div className="rule">✓ NODE 3：AI 只生成純背景</div>
+            <div className="rule">✓ NODE 2：原圖直接保留（免去背）</div>
+            <div className="rule">✓ NODE 3：AI 只生成背景氛圍</div>
             <div className="rule">✓ NODE 4：Canvas 真字與價格牌</div>
             <div className="rule">✓ NODE 5：陰影、反射、速度線、融合光後製</div>
             <h2 className="h" style={{marginTop:18}}>Debug 面板</h2>
             <div className="status" style={{fontSize:12, maxHeight:260, overflow:"auto"}}>
               {debug.map((line, i) => <div key={i}>{line}</div>)}
             </div>
-            <p className="small">v8.2 可用兩種主體鎖定方式：① remove.bg 自動去背；② 手動上傳去背 PNG 備援。都不會讓 AI 重畫車與人。</p>
+            <p className="small">v8.3 走最簡化流程：原始人車照直接放入商業照片框，不用 remove.bg、不用去背 PNG。優點是最快最穩，車與人不會被 AI 重畫。</p>
           </div>
         </section>
       </div>
