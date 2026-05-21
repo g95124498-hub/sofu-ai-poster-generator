@@ -7,7 +7,7 @@ export async function GET() {
     ok: true,
     openaiKey: Boolean(process.env.OPENAI_API_KEY),
     removeBgKey: Boolean(process.env.REMOVE_BG_API_KEY),
-    version: "real-v22",
+    version: "real-v22-fixed",
     time: new Date().toISOString()
   });
 }

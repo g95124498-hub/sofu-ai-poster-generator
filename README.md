@@ -1,25 +1,23 @@
-# SOFU AI Poster Generator Real v22
+# SOFU AI Poster Generator Real v22 Fixed
 
-真正重構方向：台灣中古車高 CTR 海報。
+這是 v22 修正版。
 
-## v22 實際新增
-- 台灣 CTR 模式
-- 車體自動壓迫放大
-- 主體預設更貼鏡頭
-- 強化 AO 接地陰影
-- 濕地板 reflection fade
-- 前景 showroom haze
-- 更粗更厚金屬字
-- 更大更暴力價格牌
-- 離線 showroom 背景加強
-- 底部資訊條降低，避免吃掉車身
-- 可調地板反射 / showroom 強度 / AO 重量
-- API 檢查
-- PNG 高畫質 / JPG 投放版下載
+## 實際修正
 
-## 部署
-1. 解壓縮 ZIP
-2. 上傳到 GitHub
-3. Vercel Deploy
-4. 設定 OPENAI_API_KEY
-5. 沒有 REMOVE_BG_API_KEY 時，請上傳去背人車 PNG
+- 不再因為 REMOVE_BG_API_KEY 未設定而卡住
+- 有去背 PNG：直接使用去背 PNG
+- 有 remove.bg key：自動去背
+- 沒有去背 PNG / 沒有 key：自動切換原圖測試模式
+- 保留 v22 台灣 CTR / 車體放大 / AO / showroom 方向
+
+## 建議正式使用
+
+效果最好：上傳「去背人車 PNG」。
+
+## Vercel 環境變數
+
+必要：OPENAI_API_KEY
+
+可選：REMOVE_BG_API_KEY
+
+沒有 REMOVE_BG_API_KEY 也能先測試。

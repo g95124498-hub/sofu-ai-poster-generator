@@ -89,66 +89,38 @@ ${extra}`, [extra]);
     setStatus(`已上傳：${uploadItems.find((x) => x.key === key)?.label}`);
   }
 
+  
   async function getSubject(): Promise<string> {
+    // 優先使用使用者上傳的去背 PNG，這是正式商用最穩流程。
     if (urls.cutout) {
       setCutoutUrl(urls.cutout);
       return urls.cutout;
     }
-    if (!files.source) throw new Error("請先上傳原始人車照，或上傳去背人車 PNG。");
-    const form = new FormData();
-    form.append("image", await compressImage(files.source, 1600, 0.8));
-    const res = await fetch("/api/remove-bg", { method: "POST", body: form });
-    const data = await res.json();
-    if (!res.ok || !data.imageUrl) {
-      throw new Error(data.error || "自動去背失敗。沒有 REMOVE_BG_API_KEY 時，請上傳去背人車 PNG。");
-    }
-    setCutoutUrl(data.imageUrl);
-    return data.imageUrl;
-  }
 
-  function makeLocalBackground(): string {
-    const c = document.createElement("canvas");
-    const W = 1600, H = 1200;
-    c.width = W; c.height = H;
-    const ctx = c.getContext("2d")!;
-    const bg = ctx.createLinearGradient(0, 0, W, H);
-    bg.addColorStop(0, "#030303"); bg.addColorStop(.22, "#191919"); bg.addColorStop(.55, "#070707"); bg.addColorStop(1, "#230000");
-    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-
-    for (let i=0;i<12;i++) {
-      const x=i*155-80;
-      const g=ctx.createLinearGradient(x,0,x+140,0);
-      g.addColorStop(0,"rgba(255,255,255,.018)"); g.addColorStop(.5,"rgba(255,255,255,.075)"); g.addColorStop(1,"rgba(0,0,0,.28)");
-      ctx.fillStyle=g; ctx.fillRect(x,0,145,650);
+    if (!files.source || !urls.source) {
+      throw new Error("請先上傳原始人車照。");
     }
-    const floor=ctx.createLinearGradient(0,560,0,H);
-    floor.addColorStop(0,"rgba(65,65,65,.36)"); floor.addColorStop(.42,"rgba(18,18,18,.98)"); floor.addColorStop(1,"rgba(0,0,0,1)");
-    ctx.fillStyle=floor; ctx.fillRect(0,560,W,640);
-    const wet=ctx.createRadialGradient(930,930,0,930,930,820);
-    wet.addColorStop(0,"rgba(255,70,0,.30)"); wet.addColorStop(.44,"rgba(255,0,0,.13)"); wet.addColorStop(1,"rgba(255,0,0,0)");
-    ctx.fillStyle=wet; ctx.fillRect(0,600,W,600);
 
-    ctx.save(); ctx.strokeStyle="rgba(255,255,255,.08)"; ctx.lineWidth=2;
-    for(let i=-10;i<=17;i++){ ctx.beginPath(); ctx.moveTo(W/2,585); ctx.lineTo(i*145,H); ctx.stroke(); }
-    for(let y=675;y<H;y+=74){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y+24); ctx.stroke(); }
-    ctx.restore();
+    // 嘗試 remove.bg；失敗時不再卡住，直接進入原圖測試模式。
+    try {
+      const form = new FormData();
+      form.append("image", await compressImage(files.source, 1600, 0.8));
+      const res = await fetch("/api/remove-bg", { method: "POST", body: form });
+      const data = await res.json();
 
-    for(let i=0;i<42;i++){
-      const y=110+i*23;
-      const g=ctx.createLinearGradient(-160,y,W+180,y-210);
-      g.addColorStop(0,"rgba(255,0,0,0)"); g.addColorStop(.22,i%4===0?"rgba(255,25,0,.98)":"rgba(255,110,0,.36)");
-      g.addColorStop(.70,i%4===0?"rgba(255,170,45,.70)":"rgba(255,50,0,.22)"); g.addColorStop(1,"rgba(255,0,0,0)");
-      ctx.strokeStyle=g; ctx.lineWidth=i%4===0?12:5; ctx.beginPath(); ctx.moveTo(-240,y+88); ctx.lineTo(W+280,y-165); ctx.stroke();
+      if (res.ok && data.imageUrl) {
+        setCutoutUrl(data.imageUrl);
+        return data.imageUrl;
+      }
+
+      setStatus("提醒：沒有可用的 remove.bg 去背。已切換原圖測試模式；正式效果建議上傳『去背人車 PNG』。");
+      setCutoutUrl(urls.source);
+      return urls.source;
+    } catch (err) {
+      setStatus("提醒：自動去背失敗。已切換原圖測試模式；正式效果建議上傳『去背人車 PNG』。");
+      setCutoutUrl(urls.source);
+      return urls.source;
     }
-    for(let i=0;i<6;i++){
-      const fog=ctx.createRadialGradient(180+i*285,750+i*22,0,180+i*285,750+i*22,520);
-      fog.addColorStop(0,`rgba(255,255,255,${.13-i*.012})`); fog.addColorStop(.55,`rgba(255,135,45,${.045-i*.004})`); fog.addColorStop(1,"rgba(255,255,255,0)");
-      ctx.fillStyle=fog; ctx.fillRect(0,430,W,650);
-    }
-    const v=ctx.createRadialGradient(W/2,H/2,260,W/2,H/2,960);
-    v.addColorStop(0,"rgba(0,0,0,0)"); v.addColorStop(1,"rgba(0,0,0,.82)");
-    ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
-    return c.toDataURL("image/png");
   }
 
   async function generateBackground(): Promise<string> {
@@ -285,7 +257,7 @@ ${extra}`, [extra]);
 
   return (
     <main className="page"><div className="wrap">
-      <div className="badge">SOFU AI Poster Generator Real v22</div>
+      <div className="badge">SOFU AI Poster Generator Real v22 Fixed</div>
       <h1 className="title">首福汽車 AI 商業海報網頁軟體 v22</h1>
       <p className="sub">台灣中古車高 CTR 模式：車體壓迫構圖、強 AO 接地、濕地板反射、暴力價格牌、重金屬字。</p>
       <section className="grid">
