@@ -1,23 +1,16 @@
-# SOFU AI Poster Generator Real v22 Fixed
+# SOFU AI Poster Generator Real v22.2
 
-這是 v22 修正版。
+修正 Vercel build error：
 
-## 實際修正
+- 已補上 makeLocalBackground
+- 不會因為 REMOVE_BG_API_KEY 未設定而卡住
+- 沒有 remove.bg key 也能用原圖先測試
+- 正式效果建議上傳去背人車 PNG
+- 保留台灣 CTR / 車體放大 / AO / haze / 暴力價格牌方向
 
-- 不再因為 REMOVE_BG_API_KEY 未設定而卡住
-- 有去背 PNG：直接使用去背 PNG
-- 有 remove.bg key：自動去背
-- 沒有去背 PNG / 沒有 key：自動切換原圖測試模式
-- 保留 v22 台灣 CTR / 車體放大 / AO / showroom 方向
-
-## 建議正式使用
-
-效果最好：上傳「去背人車 PNG」。
-
-## Vercel 環境變數
-
-必要：OPENAI_API_KEY
-
-可選：REMOVE_BG_API_KEY
-
-沒有 REMOVE_BG_API_KEY 也能先測試。
+部署：
+1. 解壓縮
+2. 上傳 GitHub
+3. Vercel Deploy
+4. 設定 OPENAI_API_KEY
+5. 可選 REMOVE_BG_API_KEY

@@ -1,6 +1,6 @@
 {
-  "name": "sofu-ai-poster-generator-real-v22-fixed",
-  "version": "22.1.0",
+  "name": "sofu-ai-poster-generator-real-v22-2",
+  "version": "22.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
